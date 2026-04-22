@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chạy Trốn Vô Tận - Vite Project</title>
+</head>
+<body>
+    <div id="main-menu">
+        <h1 id="menu-title">TRỐN THOÁT</h1>
+        
+        <div class="selection-group" id="group-player">
+            <div class="group-title">Chọn Người Chạy</div>
+            <div class="buttons-container" id="container-player"></div>
+        </div>
+
+        <div class="selection-group" id="group-monster">
+            <div class="group-title">Chọn Kẻ Đuổi Theo</div>
+            <div class="buttons-container" id="container-monster"></div>
+        </div>
+
+        <div class="selection-group" id="group-camera">
+    <div class="group-title">Chọn Góc Nhìn</div>
+        <div class="buttons-container" id="container-camera">
+            <button class="camera-option selected" data-camera="thirdPerson">Góc nhìn thứ 3</button>
+            <button class="camera-option" data-camera="firstPerson">Góc nhìn thứ 1</button>
+        </div>
+    </div>
+        <button id="btn-play">CHƠI NGAY</button>
+        <button id="btn-setting">Setting</button>
+    </div>
+
+    <div id="ui">
+        QUÃNG ĐƯỜNG: <span id="score">0</span>m<br>
+        VÀNG: <span id="coinCount">0</span><br>
+        <button id="btn-camera">Góc nhìn: 3rd</button>
+    </div>
+    <div id="flash"></div>
+    <div id="msg">
+        <h1 id="death-title">BỊ BẮT RỒI!</h1>
+        <div id="final-stats"></div>
+        <button class="retry" onclick="location.reload()">THỬ LẠI</button>
+    </div>
+
+    <!-- <div id="mobile-controls">
+        <div class="control-btn" id="btn-left">Trái</div>
+
+        <div class="action-btns">
+            <div class="control-btn jump" id="btn-jump">Nhảy</div>
+            <div class="control-btn slide" id="btn-slide">Trườn</div>
+            <div class="control-btn" id="btn-camera-mobile">Cam</div>
+        </div>
+
+        <div class="control-btn" id="btn-right">Phải</div>
+    </div> -->
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>

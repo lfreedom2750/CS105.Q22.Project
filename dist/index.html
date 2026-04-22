@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chạy Trốn Vô Tận - Vite Project</title>
+  <script type="module" crossorigin src="/assets/index-B1Epws_M.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-7mM670GH.css">
+</head>
+<body>
+    <div id="main-menu">
+        <h1 id="menu-title">TRỐN THOÁT</h1>
+        
+        <div class="selection-group" id="group-player">
+            <div class="group-title">Chọn Người Chạy</div>
+            <div class="buttons-container" id="container-player"></div>
+        </div>
+
+        <div class="selection-group" id="group-monster">
+            <div class="group-title">Chọn Kẻ Đuổi Theo</div>
+            <div class="buttons-container" id="container-monster"></div>
+        </div>
+
+        <button id="btn-play">CHƠI NGAY</button>
+        <button id="btn-setting">Setting</button>
+    </div>
+
+    <div id="ui">QUÃNG ĐƯỜNG: <span id="score">0</span>m<br>VÀNG: <span id="coinCount">0</span></div>
+    <div id="flash"></div>
+    <div id="msg">
+        <h1 id="death-title">BỊ BẮT RỒI!</h1>
+        <div id="final-stats"></div>
+        <button class="retry" onclick="location.reload()">THỬ LẠI</button>
+    </div>
+
+    <div id="mobile-controls">
+        <div class="control-btn" id="btn-left">Trái</div>
+        <div class="action-btns">
+            <div class="control-btn jump" id="btn-jump">Nhảy</div>
+            <div class="control-btn slide" id="btn-slide">Trườn</div>
+        </div>
+        <div class="control-btn" id="btn-right">Phải</div>
+    </div>
+
+</body>
+</html>
