@@ -16,6 +16,8 @@ const clock = new THREE.Clock();
 let gameActive = false;
 let spawnTimeout = null;
 
+let bridgeTimer = 0;
+
 // Entities
 const player = new Player(scene);
 const monster = new Monster(scene);
@@ -326,6 +328,16 @@ function animate() {
     const delta = clock.getDelta();
     const time = clock.elapsedTime;
 
+    bridgeTimer += delta;
+
+    if (bridgeTimer >= CONFIG.BRIDGE.interval) {
+        bridgeTimer = 0;
+
+        if (!env.activeBridge) {
+            env.spawnBridgeSegment(player.group.position.z - CONFIG.BRIDGE.spawnAhead);
+        }
+    }
+
     if (!waitingForSeasonPortal) {
         seasonTimer += delta;
 
@@ -338,6 +350,7 @@ function animate() {
 
     // 1. Player update
     player.update(delta, time, speed);
+
 
     if (cameraMode === 'firstPerson' && player.model) {
     camera.position.x = THREE.MathUtils.lerp(

@@ -16,6 +16,9 @@ export class Environment {
         this.treeSpacing = 20;
         this.treeModel = null;
 
+        this.bridgeModel = null;
+        this.activeBridge = null;
+
         const textureLoader = new THREE.TextureLoader();
 
         // Load texture đường cho từng mùa
@@ -73,6 +76,99 @@ export class Environment {
 
     getNextSeason() {
         return CONFIG.SEASONS[this.getNextSeasonIndex()];
+    }
+
+    async loadBridgeModel() {
+        if (this.bridgeModel) return;
+
+        const loader = new GLTFLoader();
+        const gltf = await loader.loadAsync(`${CONFIG.PATH_ASSETS}${CONFIG.BRIDGE.file}`);
+        this.bridgeModel = gltf.scene;
+
+        this.bridgeModel.traverse(c => {
+            if (c.isMesh) {
+                c.castShadow = true;
+                c.receiveShadow = true;
+            }
+        });
+    }
+
+    async spawnBridgeSegment(z) {
+    if (this.activeBridge) return;
+
+    await this.loadBridgeModel();
+
+    const bridge = this.bridgeModel.clone(true);
+    bridge.scale.set(
+        CONFIG.BRIDGE.scale,
+        CONFIG.BRIDGE.scale,
+        CONFIG.BRIDGE.scale
+    );
+
+    bridge.traverse(c => {
+        if (c.isMesh) {
+            c.castShadow = true;
+            c.receiveShadow = true;
+        }
+    });
+
+    const box = new THREE.Box3().setFromObject(bridge);
+    const size = new THREE.Vector3();
+    const center = new THREE.Vector3();
+
+    box.getSize(size);
+    box.getCenter(center);
+
+    console.log('=== BRIDGE DEBUG ===');
+    console.log('SIZE:', size);
+    console.log('CENTER:', center);
+    console.log('MIN Y:', box.min.y);
+    console.log('MAX Y:', box.max.y);
+
+    // đưa về giữa X/Z
+    bridge.position.x -= center.x;
+    bridge.position.z -= center.z;
+
+    // đưa đáy về 0 trước
+    bridge.position.y -= box.min.y;
+
+    // rồi hạ thêm bằng offset tay
+    bridge.position.y += CONFIG.BRIDGE.modelOffsetY;
+
+    // đặt ra vị trí thật
+    bridge.position.z += z;
+
+    this.scene.add(bridge);
+
+    const bridgeRoad = new THREE.Mesh(
+        new THREE.PlaneGeometry(30, CONFIG.BRIDGE.length),
+        this.getCurrentGroundMat()
+    );
+    bridgeRoad.rotation.x = -Math.PI / 2;
+    bridgeRoad.position.set(0, 0.05, z);
+    bridgeRoad.receiveShadow = true;
+    bridgeRoad.userData.isBridgeRoad = true;
+
+    this.scene.add(bridgeRoad);
+
+    this.activeBridge = {
+        model: bridge,
+        road: bridgeRoad,
+        startZ: z + CONFIG.BRIDGE.length / 2,
+        endZ: z - CONFIG.BRIDGE.length / 2
+    };
+}
+
+    getBridgeHeightAt(playerZ) {
+        if (!this.activeBridge) return 0;
+
+        const { startZ, endZ } = this.activeBridge;
+
+        if (playerZ <= startZ && playerZ >= endZ) {
+            return CONFIG.BRIDGE.roadY;
+        }
+
+        return 0;
     }
 
     async loadTreeModelForSeason() {
@@ -367,5 +463,16 @@ export class Environment {
                     : -10 - Math.random() * 4;
             }
         });
+
+        if (this.activeBridge) {
+            const { model, road, startZ } = this.activeBridge;
+
+            // khi cầu đã đi qua hẳn phía sau player
+            if (model.position.z > playerZ + 40) {
+                this.scene.remove(model);
+                this.scene.remove(road);
+                this.activeBridge = null;
+            }
+        }
     }
 }

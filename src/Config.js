@@ -99,6 +99,26 @@ export const CONFIG = {
             scale: 1.2,
             positionY: 3.5,
             seasons: ['spring', 'summer', 'autumn']
+        },
+        {
+            id: 'candy_cane',
+            type: 'low',
+            spawnMode: 'glb',
+            file: 'candy_cane.glb',
+            scale: 5,
+            positionY: 0,
+            rotation: { x: 0, y: 0, z: 0 },
+            seasons: ['winter', 'autumn', 'spring', 'summer']
+        },
+        {
+            id: 'santa_claus',
+            type: 'low',
+            spawnMode: 'glb',
+            file: 'santa_claus.glb',
+            scale: 0.01,
+            positionY: 0,
+            rotation: { x: 0, y: 0, z: 0 },
+            seasons: ['winter', 'spring', 'summer', 'autumn']
         }
     ],
 
@@ -110,5 +130,14 @@ export const CONFIG = {
     ],
     MONSTERS: [
         { id: 'demon_v1', name: 'Quỷ Lửa', file: 'player_v1.glb' }, // Đổi tên file cho đúng
-    ]
+    ],
+
+    BRIDGE: {
+        file: 'bridge.glb',
+        interval: 30,
+        scale: 0.25,
+        length: 58,
+        spawnAhead: 80,
+        modelOffsetY: -12.6
+    }
 };

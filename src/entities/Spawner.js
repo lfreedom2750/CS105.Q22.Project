@@ -116,36 +116,111 @@ export class Spawner {
         return obs;
     }
 
+    // async createGLBObstacle(def) {
+    //     try {
+    //         console.log('Đang load obstacle GLB:', def.file);
+
+    //         if (!this.obstacleModelCache[def.file]) {
+    //             const loader = new GLTFLoader();
+    //             const gltf = await loader.loadAsync(`${CONFIG.PATH_ASSETS}${def.file}`);
+    //             this.obstacleModelCache[def.file] = gltf.scene;
+    //         }
+
+    //         const obs = this.obstacleModelCache[def.file].clone(true);
+
+    //         const scale = def.scale || 1;
+    //         obs.scale.set(scale, scale, scale);
+
+    //         obs.traverse(c => {
+    //             if (c.isMesh) {
+    //                 c.castShadow = true;
+    //                 c.receiveShadow = true;
+    //             }
+    //         });
+
+    //         if (def.rotation) {
+    //             obs.rotation.set(
+    //                 def.rotation.x || 0,
+    //                 def.rotation.y || 0,
+    //                 def.rotation.z || 0
+    //             );
+    //         }
+
+    //         return obs;
+    //     } catch (err) {
+    //         console.error('Lỗi load obstacle GLB:', def.file, err);
+    //         return null;
+    //     }
+    // }
+
     async createGLBObstacle(def) {
+    try {
+        console.log('Đang load obstacle GLB:', def.file);
+
         if (!this.obstacleModelCache[def.file]) {
             const loader = new GLTFLoader();
             const gltf = await loader.loadAsync(`${CONFIG.PATH_ASSETS}${def.file}`);
             this.obstacleModelCache[def.file] = gltf.scene;
         }
 
-        const obs = this.obstacleModelCache[def.file].clone(true);
+        const model = this.obstacleModelCache[def.file].clone(true);
 
+        // 1. scale trước
         const scale = def.scale || 1;
-        obs.scale.set(scale, scale, scale);
+        model.scale.set(scale, scale, scale);
 
-        obs.traverse(c => {
-            if (c.isMesh) {
-                c.castShadow = true;
-                c.receiveShadow = true;
-            }
-        });
-
+        // 2. rotation trước
         if (def.rotation) {
-            obs.rotation.set(
+            model.rotation.set(
                 def.rotation.x || 0,
                 def.rotation.y || 0,
                 def.rotation.z || 0
             );
         }
 
-        return obs;
-    }
+        // 3. shadow
+        model.traverse(c => {
+            if (c.isMesh) {
+                c.castShadow = true;
+                c.receiveShadow = true;
+            }
+        });
 
+        // 4. Bọc model vào wrapper để dễ chỉnh pivot
+        const wrapper = new THREE.Group();
+        wrapper.add(model);
+
+        // 5. Tính bounding box sau khi scale/rotation
+        const box = new THREE.Box3().setFromObject(model);
+        const size = new THREE.Vector3();
+        const center = new THREE.Vector3();
+
+        box.getSize(size);
+        box.getCenter(center);
+
+        console.log('SIZE:', size);
+        console.log('CENTER:', center);
+        console.log('MIN Y:', box.min.y);
+        console.log('MAX Y:', box.max.y);
+
+        // 6. Kéo model về giữa local origin theo X/Z
+        model.position.x -= center.x;
+        model.position.z -= center.z;
+
+        // 7. Kéo đáy model chạm mặt đất local y = 0
+        model.position.y -= box.min.y;
+
+        // Nếu muốn debug trực quan thì mở 2 dòng này:
+        // const axes = new THREE.AxesHelper(5);
+        // wrapper.add(axes);
+
+        return wrapper;
+    } catch (err) {
+        console.error('Lỗi load GLB obstacle:', def.file, err);
+        return null;
+    }
+}
+    
     async spawnObstacle(lane, spawnZ) {
         const seasonId = this.getCurrentSeasonId();
 
@@ -237,6 +312,7 @@ export class Spawner {
     // }
 
     async spawn(score, playerZ) {
+        if (this.env.activeBridge) return;
 
         if (this.forceSpawnSeasonPortal && this.portals.length === 0) {
             const portal = this.createSeasonPortal(playerZ - 45);
