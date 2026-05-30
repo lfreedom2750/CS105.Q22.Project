@@ -9,6 +9,8 @@ import { Monster } from './entities/Monster.js';
 import { Environment } from './entities/Environment.js';
 import { Spawner } from './entities/Spawner.js';
 import { PlaneEvent } from './entities/PlaneEvent.js';
+import { SnowEffect } from './entities/SnowEffect.js';
+import { SoundManager } from './core/SoundManager.js';
 
 const { scene, camera, renderer, sunLight, hemiLight } = initScene();
 const clock = new THREE.Clock();
@@ -24,6 +26,8 @@ const monster = new Monster(scene);
 const env = new Environment(scene, hemiLight);
 const spawner = new Spawner(scene, env);
 const planeEvent = new PlaneEvent(scene);
+const snowEffect = new SnowEffect(scene);
+const soundManager = new SoundManager();
 
 let cameraMode = 'thirdPerson';
 
@@ -33,12 +37,10 @@ const updateCameraMode = () => {
         camera.rotation.set(-0.2, 0, 0);
 
         if (player.model) player.model.visible = true;
-    } else {
+    } else if (cameraMode === 'firstPerson') {
         const laneX = player.model ? player.model.position.x : 0;
 
         camera.position.set(laneX, 3.2, 0.2);
-
-        // nếu bị ngược hướng thì đổi 0 thành Math.PI
         camera.rotation.set(0, 0, 0);
 
         if (player.model) player.model.visible = false;
@@ -111,6 +113,9 @@ const SEASON_DURATION = 10; // 20 giây đổi mùa
 let waitingForSeasonPortal = false;
 let isChangingSeason = false;
 
+let lastFootstepTime = 0;
+const FOOTSTEP_INTERVAL = 0.25; // seconds between footsteps
+
 renderer.render(scene, camera);
 
 const getSelectedCameraModeFromMenu = () => {
@@ -124,6 +129,7 @@ const startGame = async (selectedPlayerId, selectedMonsterId) => {
     cameraMode = getSelectedCameraModeFromMenu();
 
     try {
+        await soundManager.init();
         // reset state nếu chơi lại
         gameActive = false;
         score = 0;
@@ -135,6 +141,7 @@ const startGame = async (selectedPlayerId, selectedMonsterId) => {
 
         spawner.clearWorld();
         planeEvent.reset();
+        snowEffect.deactivate();
 
         await Promise.all([
             player.loadModel(selectedPlayerId),
@@ -156,6 +163,8 @@ const startGame = async (selectedPlayerId, selectedMonsterId) => {
         updateCameraMode();
 
         gameActive = true;
+
+        soundManager.startAmbientForSeason(env.currentSeasonIndex);
 
         const mobileControls = document.getElementById('mobile-controls');
         if (mobileControls) mobileControls.style.display = 'flex';
@@ -263,10 +272,12 @@ window.addEventListener('keydown', (e) => {
 const addCoin = () => {
     coins++;
     document.getElementById('coinCount').innerText = coins;
+    soundManager.playCoinSound();
 };
 
 const gameOver = (reason) => {
     gameActive = false;
+    soundManager.stopAmbient();
 
     if (spawnTimeout) {
         clearTimeout(spawnTimeout);
@@ -279,6 +290,12 @@ const gameOver = (reason) => {
     document.getElementById('death-title').innerText = reason || 'GAME OVER';
     document.getElementById('final-stats').innerText =
         `Quãng đường: ${Math.floor(score / 10)}m | Vàng: ${coins}`;
+
+    if (reason && reason.includes('SUỐI')) {
+        soundManager.playRiverSound();
+    } else {
+        soundManager.playObstacleSound();
+    }
 };
 
 
@@ -300,6 +317,7 @@ const seasonChange = async () => {
     try {
         triggerFlash();
         await env.triggerSeasonChange();
+        soundManager.startAmbientForSeason(env.currentSeasonIndex);
         waitingForSeasonPortal = false;
     } catch (err) {
         console.error('Lỗi chuyển mùa:', err);
@@ -351,14 +369,24 @@ function animate() {
     // 1. Player update
     player.update(delta, time, speed);
 
+    // Âm thanh bước chân (không phải mùa đông)
+    if (env.currentSeasonIndex !== 3) {
+        lastFootstepTime += delta;
+        if (lastFootstepTime >= FOOTSTEP_INTERVAL) {
+            soundManager.playFootstepSound();
+            lastFootstepTime = 0;
+        }
+    }
 
-    if (cameraMode === 'firstPerson' && player.model) {
-    camera.position.x = THREE.MathUtils.lerp(
-        camera.position.x,
-        player.model.position.x,
-        12 * delta
-    );
-}
+
+if (cameraMode === 'firstPerson' && player.model) {
+        const targetX = player.model.position.x;
+        camera.position.x = THREE.MathUtils.lerp(
+            camera.position.x,
+            targetX,
+            12 * delta
+        );
+    }
 
     // 2. Lấy vị trí player
     const pX = player.model ? player.model.position.x : player.group.position.x;
@@ -383,6 +411,8 @@ function animate() {
     env.update(speed, pZ);
     spawner.update(speed, player, addCoin, gameOver, seasonChange);
     planeEvent.update(delta, time, pX, pZ, spawner.obstacles);
+    snowEffect.setSeason(env.currentSeasonIndex === 3); // Chỉ mùa đông (index 3)
+    snowEffect.update(pZ, delta);
 
     // 6. Ánh sáng
     sunLight.position.set(pX + 5, 25, pZ + 10);

@@ -18,37 +18,54 @@ export class Player {
     }
 
     async loadModel(playerId) {
-        const playerInfo = CONFIG.PLAYERS.find(p => p.id === playerId);
-        const fileName = playerInfo ? playerInfo.file : CONFIG.PLAYERS[0].file;
+        try {
+            const playerInfo = CONFIG.PLAYERS.find(p => p.id === playerId);
+            const fileName = playerInfo ? playerInfo.file : CONFIG.PLAYERS[0].file;
+            const modelScale = playerInfo?.scale ?? 0.01;
+            const modelRotationY = playerInfo?.rotationY ?? Math.PI;
+            const modelPositionY = playerInfo?.positionY ?? 0;
 
-        const loader = new GLTFLoader();
-        const gltf = await loader.loadAsync(`${CONFIG.PATH_ASSETS}${fileName}`);
-        
-        this.model = gltf.scene;
-        this.model.traverse(c => { if(c.isMesh) { c.castShadow = true; c.receiveShadow = true; }});
-        
-        this.model.scale.set(0.01, 0.01, 0.01);
-        this.model.rotation.y = Math.PI; 
+            console.log('=== LOADING PLAYER MODEL ===');
+            console.log('File:', `${CONFIG.PATH_ASSETS}${fileName}`);
+            console.log('Scale:', modelScale);
+            console.log('RotationY:', modelRotationY);
+            console.log('PositionY:', modelPositionY);
 
-        this.group.add(this.model);
+            const loader = new GLTFLoader();
+            const gltf = await loader.loadAsync(`${CONFIG.PATH_ASSETS}${fileName}`);
 
-        if (gltf.animations.length > 0) {
-            this.mixer = new THREE.AnimationMixer(this.model);
-            
-            const clips = ['Run', 'Jump', 'Slide'];
-            clips.forEach((name, index) => {
-                const clip = THREE.AnimationClip.findByName(gltf.animations, name) || gltf.animations[index];
-                if (clip) {
-                    this.animationsMap[name] = this.mixer.clipAction(clip);
-                    if (name !== 'Run') {
-                        this.animationsMap[name].setLoop(THREE.LoopOnce);
-                        this.animationsMap[name].clampWhenFinished = true;
+            this.model = gltf.scene;
+            this.model.traverse(c => { if(c.isMesh) { c.castShadow = true; c.receiveShadow = true; }});
+
+            this.model.scale.set(modelScale, modelScale, modelScale);
+            this.model.rotation.y = modelRotationY;
+            this.model.position.y = modelPositionY;
+
+            this.group.add(this.model);
+
+            if (gltf.animations.length > 0) {
+                this.mixer = new THREE.AnimationMixer(this.model);
+
+                const clips = ['Run', 'Jump', 'Slide'];
+                clips.forEach((name, index) => {
+                    const clip = THREE.AnimationClip.findByName(gltf.animations, name) || gltf.animations[index];
+                    if (clip) {
+                        this.animationsMap[name] = this.mixer.clipAction(clip);
+                        if (name !== 'Run') {
+                            this.animationsMap[name].setLoop(THREE.LoopOnce);
+                            this.animationsMap[name].clampWhenFinished = true;
+                        }
                     }
-                }
-            });
+                });
 
-            this.currentAction = this.animationsMap['Run'];
-            if(this.currentAction) this.currentAction.play();
+                this.currentAction = this.animationsMap['Run'];
+                if(this.currentAction) this.currentAction.play();
+
+                console.log('Player model loaded OK, animations:', Object.keys(this.animationsMap));
+            }
+        } catch (err) {
+            console.error('=== ERROR LOADING PLAYER MODEL ===');
+            console.error(err);
         }
     }
 
@@ -70,22 +87,12 @@ export class Player {
     slide() { if(!this.isJumping && !this.isSliding) { this.isSliding = true; this.slideTimer = 0.75; }}
 
     turn(direction) {
-        // direction: 1 là trái (ngược chiều kim đồng hồ), -1 là phải
-        const angle = (Math.PI / 2) * direction;
-        this.group.rotation.y += angle;
-        
-        // Cực kỳ quan trọng: Khi rẽ xong, vị trí model local X phải được reset 
-        // để nhân vật không bị "văng" ra ngoài đường mới
-        this.currentLane = 1; 
-        if (this.model) this.model.position.x = 0; 
-    }turn(direction) {
-    // KHÔNG XOAY THẬT
-    this.currentLane = 1;
-
-    if (this.model) {
-        this.model.position.x = 0;
+        // KHÔNG XOAY THẬT - Chỉ reset vị trí
+        this.currentLane = 1;
+        if (this.model) {
+            this.model.position.x = 0;
+        }
     }
-}
 
     update(delta, time, speed) {
         if (!this.model) return; 

@@ -41,6 +41,11 @@ export class Spawner {
             autumn: new THREE.MeshStandardMaterial({ color: 0xd97706, roughness: 1 }),
             winter: new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 1 })
         };
+
+        this.obstacleColors = {
+            torus: new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.8, roughness: 0.2 }),
+            trefoil: new THREE.MeshStandardMaterial({ color: 0x44aaff, metalness: 0.8, roughness: 0.2 })
+        };
     }
 
     getCurrentSeasonId() {
@@ -58,7 +63,27 @@ export class Spawner {
 
         let obs = null;
 
-        if (def.geometry === 'box') {
+        if (def.geometry === 'torus') {
+            obs = new THREE.Mesh(
+                new THREE.TorusGeometry(
+                    def.radius || 1.5,
+                    def.tube || 0.4,
+                    def.radialSegments || 16,
+                    def.tubularSegments || 100
+                ),
+                this.obstacleColors.torus
+            );
+        } else if (def.geometry === 'trefoil') {
+            obs = new THREE.Mesh(
+                new THREE.TorusKnotGeometry(
+                    def.radius || 1,
+                    def.tube || 0.3,
+                    def.tubularSegments || 64,
+                    def.radialSegments || 8
+                ),
+                this.obstacleColors.trefoil
+            );
+        } else if (def.geometry === 'box') {
             obs = new THREE.Mesh(
                 new THREE.BoxGeometry(
                     def.size?.x || 3,
@@ -348,8 +373,9 @@ export class Spawner {
             this.env.createTurnSection(turnZ, dir);
         }
         else if (type > 0.7 && type <= 0.85) {
+            const roadWidth = CONFIG.ROAD_WIDTH || 14;
             const river = new THREE.Mesh(
-                new THREE.BoxGeometry(30, 0.2, 5),
+                new THREE.BoxGeometry(roadWidth, 0.2, 5),
                 this.waterMat
             );
             river.position.set(0, 0.1, spawnZ);
@@ -405,7 +431,7 @@ export class Spawner {
             new THREE.BoxGeometry(1, 10, 1),
             pillarMat
         );
-        leftPillar.position.set(-4, 5, 0);
+        leftPillar.position.set(-3.5, 5, 0);
         leftPillar.castShadow = true;
         leftPillar.receiveShadow = true;
 
@@ -413,12 +439,12 @@ export class Spawner {
             new THREE.BoxGeometry(1, 10, 1),
             pillarMat
         );
-        rightPillar.position.set(4, 5, 0);
+        rightPillar.position.set(3.5, 5, 0);
         rightPillar.castShadow = true;
         rightPillar.receiveShadow = true;
 
         const topBar = new THREE.Mesh(
-            new THREE.BoxGeometry(9, 1, 1),
+            new THREE.BoxGeometry(8, 1, 1),
             pillarMat
         );
         topBar.position.set(0, 10, 0);
@@ -426,13 +452,13 @@ export class Spawner {
         topBar.receiveShadow = true;
 
         const ring = new THREE.Mesh(
-            new THREE.TorusGeometry(4, 0.45, 16, 64),
+            new THREE.TorusGeometry(3, 0.4, 16, 64),
             ringMat
         );
         ring.position.set(0, 5, 0);
 
         const core = new THREE.Mesh(
-            new THREE.PlaneGeometry(7, 7),
+            new THREE.PlaneGeometry(5.5, 5.5),
             coreMat
         );
         core.position.set(0, 5, -0.15);

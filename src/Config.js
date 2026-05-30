@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 
 export const CONFIG = {
-    LANE_WIDTH: 4,
-    LANES: [-4, 0, 4], 
+    LANE_WIDTH: 3,
+    LANES: [-3, 0, 3],
+    ROAD_WIDTH: 14, 
     START_SPEED: 0.5,
     SPEED_INC: 0.0002, // Tăng nhẹ để game nhanh kịch tính hơn
     
@@ -18,7 +19,7 @@ export const CONFIG = {
             fogColor: new THREE.Color(0xdff6dd),
             hemiLightColor: new THREE.Color(0xdff6dd),
             portalColor: 0xff9ecf,
-            roadTexture: 'road_spring.png',
+            roadTexture: 'road_spring.jpg',
             treeModel: 'sakura_tree.glb',
             treeScale: 10,
             obstacleTheme: 'spring'
@@ -30,7 +31,7 @@ export const CONFIG = {
             fogColor: new THREE.Color(0xfff0b3),
             hemiLightColor: new THREE.Color(0xfff0b3),
             portalColor: 0xffc300,
-            roadTexture: 'road_summer.png',
+            roadTexture: 'road_summer.jpg',
             treeModel: 'palm_tree.glb',
             treeScale: 2.5,
             obstacleTheme: 'summer'
@@ -42,7 +43,7 @@ export const CONFIG = {
             fogColor: new THREE.Color(0xffd6a5),
             hemiLightColor: new THREE.Color(0xffd6a5),
             portalColor: 0xff7a00,
-            roadTexture: 'road_autumn.png',
+            roadTexture: 'road_autumn.jpg',
             treeModel: 'palm_tree.glb',
             treeScale: 2.5,
             obstacleTheme: 'autumn'
@@ -54,7 +55,7 @@ export const CONFIG = {
             fogColor: new THREE.Color(0xcceeff),
             hemiLightColor: new THREE.Color(0xcceeff),
             portalColor: 0x8fd3ff,
-            roadTexture: 'road_winter.png',
+            roadTexture: 'road_winter.jpg',
             treeModel: 'christmas_tree_2.glb',
             treeScale: 0.25,
             obstacleTheme: 'winter'
@@ -81,6 +82,32 @@ export const CONFIG = {
             radialSegments: 8,
             positionY: 1,
             seasons: ['summer', 'autumn']
+        },
+        {
+            id: 'torus_obstacle',
+            type: 'low',
+            spawnMode: 'code',
+            geometry: 'torus',
+            radius: 1.5,
+            tube: 0.4,
+            radialSegments: 16,
+            tubularSegments: 100,
+            positionY: 1.5,
+            rotation: { x: Math.PI / 2, y: 0, z: 0 },
+            seasons: ['spring', 'summer', 'autumn', 'winter']
+        },
+        {
+            id: 'trefoil_obstacle',
+            type: 'low',
+            spawnMode: 'code',
+            geometry: 'trefoil',
+            radius: 1.2,
+            tube: 0.3,
+            tubularSegments: 64,
+            radialSegments: 8,
+            positionY: 1.5,
+            rotation: { x: 0, y: 0, z: 0 },
+            seasons: ['spring', 'summer', 'autumn', 'winter']
         },
         {
             id: 'winter_log',
@@ -125,8 +152,8 @@ export const CONFIG = {
     PATH_ASSETS: '/assets/', 
     
     PLAYERS: [
-        { id: 'player_v1', name: 'Chiến Sĩ', file: 'player_v1.glb' },
-        { id: 'human_v2', name: 'Nữ Quái', file: 'player_v1.glb' } // Đổi tên file cho đúng
+        { id: 'player_v1', name: 'Chiến Sĩ', file: 'player_v1.glb', scale: 0.01, rotationY: Math.PI, positionY: 0 },
+        { id: 'super_bunny', name: 'Super Bunny', file: 'super_bunny_final.glb', scale: 1, rotationY: Math.PI / 2, positionY: 1 }
     ],
     MONSTERS: [
         { id: 'demon_v1', name: 'Quỷ Lửa', file: 'player_v1.glb' }, // Đổi tên file cho đúng

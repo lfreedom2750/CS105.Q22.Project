@@ -19,14 +19,20 @@ export class Environment {
         this.bridgeModel = null;
         this.activeBridge = null;
 
-        const textureLoader = new THREE.TextureLoader();
-
         // Load texture đường cho từng mùa
-        this.roadTextures = CONFIG.SEASONS.map(season => {
-            const tex = textureLoader.load(`${CONFIG.PATH_ASSETS}${season.roadTexture}`);
+        this.roadTextures = CONFIG.SEASONS.map((season, index) => {
+            console.log(`Loading texture ${index}: ${CONFIG.PATH_ASSETS}${season.roadTexture}`);
+            const loader = new THREE.TextureLoader();
+            const tex = loader.load(`${CONFIG.PATH_ASSETS}${season.roadTexture}`,
+                undefined, undefined,
+                (err) => console.error(`FAILED loading texture: ${season.roadTexture}`, err)
+            );
             tex.wrapS = THREE.RepeatWrapping;
             tex.wrapT = THREE.RepeatWrapping;
-            tex.repeat.set(1, 1);
+            // Texture 768x768, tile 14x50 -> repeat theo tỷ lệ
+            const tileWidth = 14;
+            const tileLength = this.tileLength || 50;
+            tex.repeat.set(1, tileLength / 10); // Điều chỉnh theo ý muốn
             tex.anisotropy = 16;
             return tex;
         });
@@ -81,16 +87,25 @@ export class Environment {
     async loadBridgeModel() {
         if (this.bridgeModel) return;
 
-        const loader = new GLTFLoader();
-        const gltf = await loader.loadAsync(`${CONFIG.PATH_ASSETS}${CONFIG.BRIDGE.file}`);
-        this.bridgeModel = gltf.scene;
+        console.log('=== LOADING BRIDGE MODEL ===');
+        console.log('File:', `${CONFIG.PATH_ASSETS}${CONFIG.BRIDGE.file}`);
 
-        this.bridgeModel.traverse(c => {
-            if (c.isMesh) {
-                c.castShadow = true;
-                c.receiveShadow = true;
-            }
-        });
+        try {
+            const loader = new GLTFLoader();
+            const gltf = await loader.loadAsync(`${CONFIG.PATH_ASSETS}${CONFIG.BRIDGE.file}`);
+            this.bridgeModel = gltf.scene;
+            console.log('Bridge model loaded OK');
+            
+            this.bridgeModel.traverse(c => {
+                if (c.isMesh) {
+                    c.castShadow = true;
+                    c.receiveShadow = true;
+                }
+            });
+        } catch (err) {
+            console.error('=== ERROR LOADING BRIDGE MODEL ===');
+            console.error(err);
+        }
     }
 
     async spawnBridgeSegment(z) {
@@ -141,7 +156,7 @@ export class Environment {
     this.scene.add(bridge);
 
     const bridgeRoad = new THREE.Mesh(
-        new THREE.PlaneGeometry(30, CONFIG.BRIDGE.length),
+        new THREE.PlaneGeometry(CONFIG.ROAD_WIDTH || 14, CONFIG.BRIDGE.length),
         this.getCurrentGroundMat()
     );
     bridgeRoad.rotation.x = -Math.PI / 2;
@@ -157,7 +172,7 @@ export class Environment {
         startZ: z + CONFIG.BRIDGE.length / 2,
         endZ: z - CONFIG.BRIDGE.length / 2
     };
-}
+    }
 
     getBridgeHeightAt(playerZ) {
         if (!this.activeBridge) return 0;
@@ -180,21 +195,21 @@ export class Environment {
             return;
         }
 
-        const loader = new GLTFLoader();
-        const gltf = await loader.loadAsync(`${CONFIG.PATH_ASSETS}${season.treeModel}`);
+        console.log('=== LOADING TREE MODEL ===');
+        console.log('Season:', season.id);
+        console.log('File:', `${CONFIG.PATH_ASSETS}${season.treeModel}`);
 
-        this.treeModel = gltf.scene;
-        this.treeModel.traverse(c => {
-            if (c.isMesh) {
-                c.castShadow = true;
-                c.receiveShadow = true;
+        try {
+            const loader = new GLTFLoader();
+            const gltf = await loader.loadAsync(`${CONFIG.PATH_ASSETS}${season.treeModel}`);
 
-                const name = c.name.toLowerCase();
-                if (name.includes('leaf') || name.includes('foliage')) {
-                    c.userData.isFoliage = true;
-                }
-            }
-        });
+            this.treeModel = gltf.scene;
+            console.log('Tree model loaded OK');
+        } catch (err) {
+            console.error('=== ERROR LOADING TREE MODEL ===');
+            console.error(err);
+            this.treeModel = null;
+        }
     }
 
     createTree() {
@@ -252,10 +267,11 @@ export class Environment {
         this.floorTiles = [];
 
         const groundMat = this.getCurrentGroundMat();
+        const roadWidth = CONFIG.ROAD_WIDTH || 14;
 
         for (let i = -1; i < 10; i++) {
             const z = i * -this.tileLength;
-            const geo = new THREE.PlaneGeometry(30, this.tileLength);
+            const geo = new THREE.PlaneGeometry(roadWidth, this.tileLength);
             const tile = new THREE.Mesh(geo, groundMat);
 
             tile.rotation.x = -Math.PI / 2;
@@ -268,7 +284,8 @@ export class Environment {
     }
 
     createNewTile(z, isTurn = false) {
-        const width = isTurn ? 150 : 30;
+        const roadWidth = CONFIG.ROAD_WIDTH || 14;
+        const width = isTurn ? 150 : roadWidth;
         const geo = new THREE.PlaneGeometry(width, this.tileLength);
         const tile = new THREE.Mesh(geo, this.getCurrentGroundMat());
 
@@ -283,45 +300,56 @@ export class Environment {
 
     createTurnSection(z, dir) {
         const groundMat = this.getCurrentGroundMat();
+        const roadWidth = CONFIG.ROAD_WIDTH || 14;
 
-        // Xóa đoạn đường thẳng phía trước ngã rẽ để không bị dư
+        // Xóa đoạn đường thẳng phía trước ngã rẽ
         this.floorTiles = this.floorTiles.filter(tile => {
-            const isStraightAhead =
+            const isStraightAheadToRemove =
                 !tile.userData.isTurnVisual &&
+                !tile.userData.isTurn &&
                 tile.position.z < z &&
                 tile.position.z > z - 80;
 
-            if (isStraightAhead) {
+            if (isStraightAheadToRemove) {
                 this.scene.remove(tile);
                 return false;
             }
             return true;
         });
 
-        // 1) Sàn giao tại điểm bắt đầu cua
-        const junction = new THREE.Mesh(
-            new THREE.PlaneGeometry(30, 30),
-            groundMat
-        );
-        junction.rotation.x = -Math.PI / 2;
-        junction.position.set(0, 0, z);
-        junction.receiveShadow = true;
-        junction.userData.isTurnVisual = true;
-        this.scene.add(junction);
-        this.floorTiles.push(junction);
+        // Xóa cây ở vùng đường thẳng phía trước khi rẽ
+        this.trees = this.trees.filter(tree => {
+            if (tree.position.z < z && tree.position.z > z - 100) {
+                this.scene.remove(tree);
+                return false;
+            }
+            return true;
+        });
 
-        // 2) Tạo nhánh cua
-        const step = 20;
         const side = dir === 'left' ? -1 : 1;
 
-        for (let i = 1; i <= 4; i++) {
+        // Tạo ngã rẽ chữ L gắt 90 độ
+        // 1. Miếng góc vuông tại điểm rẽ
+        const cornerTile = new THREE.Mesh(
+            new THREE.PlaneGeometry(roadWidth, roadWidth),
+            groundMat
+        );
+        cornerTile.rotation.x = -Math.PI / 2;
+        cornerTile.position.set(side * roadWidth / 2, 0, z - roadWidth / 2);
+        cornerTile.receiveShadow = true;
+        cornerTile.userData.isTurnVisual = true;
+        this.scene.add(cornerTile);
+        this.floorTiles.push(cornerTile);
+
+        // 2. Đoạn đường đi thẳng theo chiều ngang (từ miếng góc đi ra)
+        for (let i = 1; i <= 6; i++) {
             const tile = new THREE.Mesh(
-                new THREE.PlaneGeometry(30, 20),
+                new THREE.PlaneGeometry(roadWidth, roadWidth),
                 groundMat
             );
 
             tile.rotation.x = -Math.PI / 2;
-            tile.position.set(side * i * step, 0, z - i * 8);
+            tile.position.set(side * (roadWidth / 2 + i * roadWidth), 0, z - roadWidth / 2);
             tile.receiveShadow = true;
             tile.userData.isTurnVisual = true;
 
@@ -335,17 +363,19 @@ export class Environment {
         this.trees = [];
 
         const totalRows = 40;
+        const roadEdge = (CONFIG.ROAD_WIDTH || 14) / 2;
 
         for (let i = 0; i < totalRows; i++) {
             const z = -i * this.treeSpacing;
 
+            // Đặt cây bên trong mép đường
             const leftTree = this.createTree();
-            leftTree.position.set(-10 - Math.random() * 4, 0, z);
+            leftTree.position.set(-roadEdge + 0.8, 0, z);
             this.scene.add(leftTree);
             this.trees.push(leftTree);
 
             const rightTree = this.createTree();
-            rightTree.position.set(10 + Math.random() * 4, 0, z);
+            rightTree.position.set(roadEdge - 0.8, 0, z);
             this.scene.add(rightTree);
             this.trees.push(rightTree);
         }
@@ -416,28 +446,28 @@ export class Environment {
     // }
 
     async triggerSeasonChange() {
-    const oldSeason = CONFIG.SEASONS[this.currentSeasonIndex].id;
-    const nextIndex = (this.currentSeasonIndex + 1) % CONFIG.SEASONS.length;
-    const nextSeason = CONFIG.SEASONS[nextIndex];
+        const oldSeason = CONFIG.SEASONS[this.currentSeasonIndex].id;
+        const nextIndex = (this.currentSeasonIndex + 1) % CONFIG.SEASONS.length;
+        const nextSeason = CONFIG.SEASONS[nextIndex];
 
-    console.log('Chuyển mùa:', oldSeason, '->', nextSeason.id);
-    console.log('roadTexture:', nextSeason.roadTexture);
-    console.log('treeModel:', nextSeason.treeModel);
+        console.log('Chuyển mùa:', oldSeason, '->', nextSeason.id);
+        console.log('roadTexture:', nextSeason.roadTexture);
+        console.log('treeModel:', nextSeason.treeModel);
 
-    this.currentSeasonIndex = nextIndex;
+        this.currentSeasonIndex = nextIndex;
 
-    this.scene.background = nextSeason.bgColor;
-    if (this.scene.fog) this.scene.fog.color.copy(nextSeason.fogColor);
-    this.hemiLight.color.copy(nextSeason.hemiLightColor);
+        this.scene.background = nextSeason.bgColor;
+        if (this.scene.fog) this.scene.fog.color.copy(nextSeason.fogColor);
+        this.hemiLight.color.copy(nextSeason.hemiLightColor);
 
-    const newGroundMat = this.getCurrentGroundMat();
-    this.floorTiles.forEach(tile => {
-        tile.material = newGroundMat;
-    });
+        const newGroundMat = this.getCurrentGroundMat();
+        this.floorTiles.forEach(tile => {
+            tile.material = newGroundMat;
+        });
 
-    await this.loadTreeModelForSeason();
-    this.initTrees();
-}
+        await this.loadTreeModelForSeason();
+        this.initTrees();
+    }
 
     update(speed, playerZ) {
         this.floorTiles.forEach(tile => {
@@ -458,9 +488,11 @@ export class Environment {
                 });
 
                 tree.position.z = farthestZ - this.treeSpacing;
-                tree.position.x = Math.random() > 0.5
-                    ? 10 + Math.random() * 4
-                    : -10 - Math.random() * 4;
+                const roadEdge = (CONFIG.ROAD_WIDTH || 14) / 2;
+                const isLeftTree = tree.position.x < 0;
+                tree.position.x = isLeftTree
+                    ? -roadEdge + 0.8
+                    : roadEdge - 0.8;
             }
         });
 
