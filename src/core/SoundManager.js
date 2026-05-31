@@ -6,6 +6,8 @@ export class SoundManager {
         this.sounds = {};
         this.ambientSource = null;
         this.ambientGain = null;
+        this.menuMusicSource = null;
+        this.menuMusicGain = null;
         this.footstepInterval = null;
         this.lastFootstepTime = 0;
     }
@@ -20,10 +22,35 @@ export class SoundManager {
         await this.loadSound('obstacle', '/assets/sounds/hit.mp3');
         await this.loadSound('river', '/assets/sounds/river.mp3');
         await this.loadSound('footstep', '/assets/sounds/footstep.mp3');
-        await this.loadSound('ambientSpring', '/assets/sounds/ambient_winter.wav');
-        await this.loadSound('ambientSummer', '/assets/sounds/ambient_winter.wav');
-        await this.loadSound('ambientAutumn', '/assets/sounds/ambient_winter.wav');
+        await this.loadSound('ambientSpring', '/assets/sounds/ambient_halloween.wav');
+        await this.loadSound('ambientSummer', '/assets/sounds/ambient_halloween.wav');
+        await this.loadSound('ambientAutumn', '/assets/sounds/ambient_halloween.wav');
         await this.loadSound('ambientWinter', '/assets/sounds/ambient_winter.wav');
+        await this.loadSound('menuMusic', '/assets/sounds/background_game.wav');
+
+        // Phát nhạc nền menu ngay khi init
+        this.startMenuMusic();
+    }
+
+    startMenuMusic() {
+        this.stopAmbient();
+        this.stopMenuMusic();
+
+        const result = this.playSound('menuMusic', 0.5, true);
+        if (result) {
+            this.menuMusicSource = result.source;
+            this.menuMusicGain = result.gainNode;
+        }
+    }
+
+    stopMenuMusic() {
+        if (this.menuMusicSource) {
+            try {
+                this.menuMusicSource.stop();
+            } catch (e) {}
+            this.menuMusicSource = null;
+            this.menuMusicGain = null;
+        }
     }
 
     async loadSound(name, url) {

@@ -15,13 +15,10 @@ export class Spawner {
         this.obstacleModelCache = {};
 
         this.forceSpawnSeasonPortal = false;
+        this.shieldActive = false;  // Shield từ phoenix
 
-        this.waterMat = new THREE.MeshStandardMaterial({
-            color: 0x0088ff,
-            transparent: true,
-            opacity: 0.8,
-            roughness: 0.1
-        });
+        // Tạo texture nước động cho suối
+        this.initRiverTexture();
 
         this.coinMat = new THREE.MeshStandardMaterial({
             color: 0xffd700,
@@ -46,6 +43,96 @@ export class Spawner {
             torus: new THREE.MeshStandardMaterial({ color: 0xff4444, metalness: 0.8, roughness: 0.2 }),
             trefoil: new THREE.MeshStandardMaterial({ color: 0x44aaff, metalness: 0.8, roughness: 0.2 })
         };
+
+        // Cache texture cho obstacle
+        this.textureCache = {};
+        
+        // River texture
+        this.riverCanvas = null;
+        this.riverContext = null;
+        this.riverTexture = null;
+        this.riverWaveTime = 0;
+    }
+
+    initRiverTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        this.riverCanvas = canvas;
+        this.riverContext = canvas.getContext('2d');
+        
+        this.riverTexture = new THREE.CanvasTexture(canvas);
+        this.riverTexture.wrapS = THREE.RepeatWrapping;
+        this.riverTexture.wrapT = THREE.RepeatWrapping;
+        this.riverTexture.repeat.set(4, 1);
+        
+        // Vẽ texture ban đầu
+        this.updateRiverTexture();
+    }
+
+    updateRiverTexture() {
+        if (!this.riverContext) return;
+        
+        const ctx = this.riverContext;
+        const width = this.riverCanvas.width;
+        const height = this.riverCanvas.height;
+        
+        this.riverWaveTime += 0.02;
+        
+        // Màu nước xanh
+        ctx.fillStyle = '#4a90d9';
+        ctx.fillRect(0, 0, width, height);
+        
+        // Sóng nước đậm hơn
+        ctx.fillStyle = 'rgba(30, 100, 200, 0.5)';
+        for (let i = 0; i < 6; i++) {
+            const y = (Math.sin(this.riverWaveTime + i * 0.8) * 15) + (i * height / 6);
+            ctx.beginPath();
+            ctx.ellipse(width / 2, y, width * 0.4, 12, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Bóng sáng trắng
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+        for (let i = 0; i < 4; i++) {
+            const x = (Math.cos(this.riverWaveTime * 0.5 + i * 1.5) * 40) + width / 2;
+            const y = (Math.sin(this.riverWaveTime * 0.7 + i * 1.2) * 30) + height / 2;
+            ctx.beginPath();
+            ctx.ellipse(x, y, 18, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        if (this.riverTexture) {
+            this.riverTexture.needsUpdate = true;
+        }
+    }
+
+    // Load texture cho obstacle
+    loadObstacleTexture(texturePath) {
+        if (this.textureCache[texturePath]) {
+            return Promise.resolve(this.textureCache[texturePath]);
+        }
+
+        return new Promise((resolve, reject) => {
+            const loader = new THREE.TextureLoader();
+            loader.load(
+                texturePath,
+                (texture) => {
+                    texture.colorSpace = THREE.SRGBColorSpace;
+                    texture.wrapS = THREE.RepeatWrapping;
+                    texture.wrapT = THREE.ClampToEdgeWrapping;
+                    texture.repeat.set(4, 1);
+                    this.textureCache[texturePath] = texture;
+                    console.log('Texture loaded:', texturePath);
+                    resolve(texture);
+                },
+                undefined,
+                (error) => {
+                    console.error('Error loading texture:', texturePath, error);
+                    reject(error);
+                }
+            );
+        });
     }
 
     getCurrentSeasonId() {
@@ -57,13 +144,40 @@ export class Spawner {
         return player.group.position.x;
     }
 
-    createCodeObstacle(def) {
+    createCodeObstacle(def, texture) {
         const seasonId = this.getCurrentSeasonId();
         const mat = this.codeObstacleMats[seasonId] || this.codeObstacleMats.summer;
 
         let obs = null;
+        let finalMat = mat;
 
         if (def.geometry === 'torus') {
+            // Nếu có texture thì dùng texture với nền trắng
+            if (texture) {
+                // Texture dạng vòng tròn - điều chỉnh để vừa khít
+                texture.wrapS = THREE.RepeatWrapping;
+                texture.wrapT = THREE.ClampToEdgeWrapping;
+                texture.repeat.set(1, 1);
+                texture.offset.set(0, 0);
+
+                finalMat = new THREE.MeshStandardMaterial({
+                    map: texture,
+                    color: 0xffffff,  // Nền trắng
+                    metalness: 0.2,
+                    roughness: 0.5,
+                    transparent: true,
+                    alphaTest: 0.1,
+                    side: THREE.DoubleSide  // Hiển thị cả 2 mặt
+                });
+            } else {
+                // Không có texture thì dùng màu trắng
+                finalMat = new THREE.MeshStandardMaterial({
+                    color: 0xffffff,
+                    metalness: 0.2,
+                    roughness: 0.5
+                });
+            }
+
             obs = new THREE.Mesh(
                 new THREE.TorusGeometry(
                     def.radius || 1.5,
@@ -71,7 +185,7 @@ export class Spawner {
                     def.radialSegments || 16,
                     def.tubularSegments || 100
                 ),
-                this.obstacleColors.torus
+                finalMat
             );
         } else if (def.geometry === 'trefoil') {
             obs = new THREE.Mesh(
@@ -260,9 +374,27 @@ export class Spawner {
         let obs = null;
 
         if (obstacleDef.spawnMode === 'code') {
-            obs = this.createCodeObstacle(obstacleDef);
+            // Load texture nếu có
+            let texture = null;
+            if (obstacleDef.texture) {
+                try {
+                    texture = await this.loadObstacleTexture(obstacleDef.texture);
+                } catch (e) {
+                    console.warn('Could not load texture:', obstacleDef.texture);
+                }
+            }
+            obs = this.createCodeObstacle(obstacleDef, texture);
         } else if (obstacleDef.spawnMode === 'glb') {
             obs = await this.createGLBObstacle(obstacleDef);
+            if (!obs) {
+                console.warn('Fallback to code obstacle for', obstacleDef.id);
+                obs = this.createCodeObstacle({
+                    geometry: 'box',
+                    size: obstacleDef.size || { x: 3, y: 1.2, z: 1 },
+                    rotation: obstacleDef.rotation,
+                    positionY: obstacleDef.positionY ?? 0.6
+                }, null);
+            }
         }
 
         if (!obs) return;
@@ -353,12 +485,7 @@ export class Spawner {
         const type = Math.random();
         const spawnZ = playerZ - 100;
 
-        if (type < 0.05 && score > 3) {
-            const portal = this.createSeasonPortal(playerZ - 45);
-            this.scene.add(portal);
-            this.portals.push(portal);
-        }
-        else if (type > 0.85 && score > 500) {
+        if (type > 0.95 && score > 1000) {
             const dir = Math.random() > 0.5 ? 'left' : 'right';
             const turnZ = playerZ - CONFIG.TURN_DISTANCE;
 
@@ -374,12 +501,41 @@ export class Spawner {
         }
         else if (type > 0.7 && type <= 0.85) {
             const roadWidth = CONFIG.ROAD_WIDTH || 14;
+            const currentSeason = CONFIG.SEASONS[this.env.currentSeasonIndex];
+            
+            // Lấy màu bg của mùa hè (season index 1) làm màu nước
+            const summerBgColor = CONFIG.SEASONS[1].bgColor;
+            // River material - bằng với lane
+            let riverMat;
+            if (currentSeason.id === 'winter') {
+                // Mùa đông: đóng băng
+                riverMat = new THREE.MeshStandardMaterial({
+                    color: 0xADD8E6,
+                    roughness: 0.95,
+                    metalness: 0.3,
+                    transparent: true,
+                    opacity: 0.85
+                });
+            } else {
+                // Xuân, Hè, Thu: dùng texture nước động
+                riverMat = new THREE.MeshStandardMaterial({
+                    map: this.riverTexture,
+                    transparent: true,
+                    opacity: 0.9,
+                    side: THREE.DoubleSide
+                });
+            }
+            
+            const riverHeight = currentSeason.id === 'winter' ? 0.1 : 0.08;
+            const riverY = riverHeight / 2;  // Đặt bằng với mặt đất
+            
             const river = new THREE.Mesh(
-                new THREE.BoxGeometry(roadWidth, 0.2, 5),
-                this.waterMat
+                new THREE.BoxGeometry(roadWidth, riverHeight, 5),
+                riverMat
             );
-            river.position.set(0, 0.1, spawnZ);
-            river.userData = { type: 'river' };
+            river.position.set(0, riverY, spawnZ);
+            river.receiveShadow = true;
+            river.userData = { type: 'river', isIce: currentSeason.id === 'winter', hasWave: currentSeason.id !== 'winter' };
 
             this.scene.add(river);
             this.obstacles.push(river);
@@ -485,9 +641,21 @@ export class Spawner {
         this.collectibles = [];
         this.portals = [];
         this.activeTurnWall = null;
+        this.shieldActive = false;  // Reset shield
+    }
+
+    setShield(active) {
+        this.shieldActive = active;
+    }
+
+    isShieldActive() {
+        return this.shieldActive;
     }
 
     update(speed, player, onCoinAdd, onDeath, onSeasonChange) {
+        // Cập nhật texture nước động
+        this.updateRiverTexture();
+        
         const pX = this.getPlayerLaneX(player);
         const pY = player.group.position.y;
         const pZ = player.group.position.z;
@@ -511,8 +679,15 @@ export class Spawner {
             const dx = Math.abs(o.position.x - pX);
             const dz = Math.abs(o.position.z - pZ);
 
-            if (o.userData.type === 'river') {
-                if (dz < 2.5 && pY < 0.5) {
+            if (o.userData.type === 'river' && o.userData.hasWave) {
+                // Animation gợn sóng cho suối
+                o.userData.waveTime = (o.userData.waveTime || 0) + 0.05;
+                o.position.y = 0.04 + Math.sin(o.userData.waveTime) * 0.02;
+                
+                // Mùa đông: đóng băng, player có thể chạy qua
+                // Các mùa khác: rơi xuống suối nếu không nhảy (shield bảo vệ được)
+                const currentSeason = CONFIG.SEASONS[this.env.currentSeasonIndex];
+                if (!this.shieldActive && currentSeason.id !== 'winter' && dz < 2.5 && pY < 0.5) {
                     onDeath("BẠN ĐÃ RƠI XUỐNG SUỐI!");
                 }
             }
@@ -520,7 +695,8 @@ export class Spawner {
                 // Để main.js hoặc logic khác xử lý việc player có rẽ đúng hay không
             }
             else {
-                if (dx < 1.8 && dz < 1.5) {
+                // Shield bảo vệ khỏi tất cả chướng ngại vật
+                if (!this.shieldActive && dx < 1.8 && dz < 1.5) {
                     if (o.userData.type === 'low' && pY < 1.2) {
                         onDeath("VẤP CHƯỚNG NGẠI VẬT!");
                     } else if (o.userData.type === 'high' && !player.isSliding) {

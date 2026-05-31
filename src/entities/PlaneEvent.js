@@ -15,7 +15,7 @@ export class PlaneEvent {
         this.attackDuration = 10;   // giữ khoảng cách trong 10 giây
         this.attackTimer = 0;
 
-        this.dropInterval = 10;    // mỗi 1.5 giây thả 1 đợt
+        this.dropInterval = 3;    // mỗi 3 giây thả 1 đợt
         this.dropTimer = 0;
 
         this.followDistance = 50;  // máy bay giữ cách player 120 đơn vị phía trước
@@ -26,6 +26,8 @@ export class PlaneEvent {
 
         this.dropSpeed = -0.18;
         this.gravity = -0.025;
+
+        this.bombTexture = null;
     }
 
     async loadModel() {
@@ -47,6 +49,25 @@ export class PlaneEvent {
 
         this.scene.add(this.plane);
         this.plane.visible = false;
+
+        // Load bomb texture
+        this.loadBombTexture();
+    }
+
+    loadBombTexture() {
+        const textureLoader = new THREE.TextureLoader();
+        textureLoader.load(
+            '/assets/war.jpg',
+            (texture) => {
+                texture.colorSpace = THREE.SRGBColorSpace;
+                this.bombTexture = texture;
+                console.log('Bomb texture loaded successfully');
+            },
+            undefined,
+            (error) => {
+                console.error('Error loading bomb texture:', error);
+            }
+        );
     }
 
     start(playerX, playerZ) {
@@ -70,14 +91,21 @@ export class PlaneEvent {
         lanes.sort(() => Math.random() - 0.5);
 
         // mỗi đợt thả 1 hoặc 2 bom
-        const count = Math.random() > 0.65 ? 2 : 1;
+        const count = Math.random() > 0.7 ? 2 : 1; // 30% thả 2 bom, 70% thả 1 bom
 
         for (let i = 0; i < count; i++) {
             const lane = lanes[i];
 
+            const bombMaterial = this.bombTexture
+                ? new THREE.MeshStandardMaterial({
+                    map: this.bombTexture,
+                    color: 0xffffff
+                })
+                : new THREE.MeshStandardMaterial({ color: 0xaa0000 });
+
             const bomb = new THREE.Mesh(
                 new THREE.BoxGeometry(2, 2, 2),
-                new THREE.MeshStandardMaterial({ color: 0xaa0000 })
+                bombMaterial
             );
 
             // rơi xuống ở phía trước player

@@ -5,14 +5,14 @@ import { CONFIG } from '../Config.js';
 export class Monster {
     constructor(scene) {
         this.group = new THREE.Group();
-        // Đặt vị trí ban đầu (hạ Y xuống 0 để đứng chạm đất thay vì bay lơ lửng như cục gạch cũ)
+        // Đặt vị trí ban đầu
         this.group.position.set(0, 0, 15);
         scene.add(this.group);
 
         // --- State GLB & Animation ---
         this.model = null;
         this.mixer = null;
-        this.animationsMap = {}; // 'Run', 'Walk' hoặc 'Attack'
+        this.animationsMap = {};
         this.currentAction = null;
     }
 
@@ -30,12 +30,11 @@ export class Monster {
         // Bật đổ bóng
         this.model.traverse(c => { if(c.isMesh) { c.castShadow = true; c.receiveShadow = true; }});
         
-        // Cần chỉnh scale cho phù hợp, tôi đang để 0.01 giống Player của bạn
-        this.model.scale.set(0.01, 0.01, 0.01); 
+        // Tăng scale lên gấp 100000 lần để monster khổng lồ
+        this.model.scale.set(2, 2, 2); 
         
-        // Quái vật rượt theo từ phía sau, có thể cần xoay mặt lại (tùy thuộc vào model của bạn)
-        // Nếu nó chạy lùi, bạn đổi số 0 thành Math.PI nhé
-        this.model.rotation.y = 0; 
+        // Xoay 180 độ
+        this.model.rotation.y = Math.PI; 
 
         this.group.add(this.model);
 
@@ -55,18 +54,18 @@ export class Monster {
     }
 
     // SỬA: update nhận thêm `delta` và `targetX`
-    update(delta, time, targetX) {
+    update(delta, time, targetX, playerZ = 0) {
         // --- 1. Cập nhật Animation Mixer ---
         if (this.mixer) this.mixer.update(delta);
 
         // --- 2. Cập nhật Vị trí (Di chuyển mượt) ---
         // X: Chạy theo làn của Player
         this.group.position.x = THREE.MathUtils.lerp(this.group.position.x, targetX, 0.04);
-        
-        // Y: Giữ sát mặt đất (bỏ nhấp nhô vì giờ đã có hoạt ảnh chân chạy)
-        this.group.position.y = 0; 
-        
-        // Z: Hiệu ứng khoảng cách dập dờn áp sát/lùi lại
-        this.group.position.z = 13 + Math.sin(time) * 1.5;
+
+        // Y: Nâng monster lên cao hơn
+        this.group.position.y = 1;
+
+        // Z: Monster ở phía SAU player, tăng khoảng cách lên
+        this.group.position.z = playerZ + 20 + Math.sin(time) * 1.5;
     }
 }

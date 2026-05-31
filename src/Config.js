@@ -5,7 +5,7 @@ export const CONFIG = {
     LANES: [-3, 0, 3],
     ROAD_WIDTH: 14, 
     START_SPEED: 0.5,
-    SPEED_INC: 0.0002, // Tăng nhẹ để game nhanh kịch tính hơn
+    SPEED_INC: 0.00005, // Tốc độ tăng chậm hơn, mỗi mùa 10s
     
     // --- CÁC THÔNG SỐ VỀ KÍCH THƯỚC ĐƯỜNG ---
     TILE_LENGTH: 50,      // Độ dài mỗi mảnh đường (khớp với Environment.js)
@@ -22,7 +22,8 @@ export const CONFIG = {
             roadTexture: 'road_spring.jpg',
             treeModel: 'sakura_tree.glb',
             treeScale: 10,
-            obstacleTheme: 'spring'
+            obstacleTheme: 'spring',
+            riverColor: 0xfff0b3  // Cùng màu bg mùa hè
         },
         {
             id: 'summer',
@@ -34,7 +35,8 @@ export const CONFIG = {
             roadTexture: 'road_summer.jpg',
             treeModel: 'palm_tree.glb',
             treeScale: 2.5,
-            obstacleTheme: 'summer'
+            obstacleTheme: 'summer',
+            riverColor: 0xfff0b3  // Cùng màu bg mùa hè
         },
         {
             id: 'autumn',
@@ -46,7 +48,8 @@ export const CONFIG = {
             roadTexture: 'road_autumn.jpg',
             treeModel: 'palm_tree.glb',
             treeScale: 2.5,
-            obstacleTheme: 'autumn'
+            obstacleTheme: 'autumn',
+            riverColor: 0xfff0b3  // Cùng màu bg mùa hè
         },
         {
             id: 'winter',
@@ -58,7 +61,8 @@ export const CONFIG = {
             roadTexture: 'road_winter.jpg',
             treeModel: 'christmas_tree_2.glb',
             treeScale: 0.25,
-            obstacleTheme: 'winter'
+            obstacleTheme: 'winter',
+            riverColor: 0xADD8E6  // Light blue đóng băng
         }
     ],
 
@@ -70,7 +74,47 @@ export const CONFIG = {
             geometry: 'box',
             size: { x: 3, y: 1.2, z: 1 },
             positionY: 0.6,
-            seasons: ['spring', 'summer', 'autumn', 'winter']
+            seasons: []
+        },
+        {
+            id: 'table_flower',
+            type: 'low',
+            spawnMode: 'glb',
+            file: 'table_with_flowers.glb',
+            scale: 1,
+            positionY: 0,
+            rotation: { x: 0, y: 0, z: 0 },
+            seasons: ['spring']
+        },
+        {
+            id: 'sunflower',
+            type: 'low',
+            spawnMode: 'glb',
+            file: 'sunflower.glb',
+            scale: 0.015,
+            positionY: 0,
+            rotation: { x: 0, y: -Math.PI / 2, z: 0 },
+            seasons: ['spring']
+        },
+        {
+            id: 'vietnamese_lantern',
+            type: 'low',
+            spawnMode: 'glb',
+            file: 'vietnamese_lantern.glb',
+            scale: 1.25,
+            positionY: 0,
+            rotation: { x: 0, y: 0, z: 0 },
+            seasons: ['spring']
+        },
+        {
+            id: 'flower_lib',
+            type: 'low',
+            spawnMode: 'glb',
+            file: 'flowers_lib.glb',
+            scale: 1,
+            positionY: -1.5,
+            rotation: { x: 0, y: 0, z: 0 },
+            seasons: ['spring']
         },
         {
             id: 'cone_spike',
@@ -81,20 +125,31 @@ export const CONFIG = {
             height: 2,
             radialSegments: 8,
             positionY: 1,
-            seasons: ['summer', 'autumn']
+            seasons: ['summer']
         },
         {
             id: 'torus_obstacle',
             type: 'low',
             spawnMode: 'code',
             geometry: 'torus',
-            radius: 1.5,
-            tube: 0.4,
+            radius: 1.2,        // Vòng tròn ở giữa nhỏ lại
+            tube: 0.5,          // Thanh vòng dày hơn
             radialSegments: 16,
             tubularSegments: 100,
             positionY: 1.5,
-            rotation: { x: Math.PI / 2, y: 0, z: 0 },
-            seasons: ['spring', 'summer', 'autumn', 'winter']
+            rotation: { x: 0, y: 0, z: 0 },  // Không xoay - hướng về phía player
+            seasons: ['summer'],
+            texture: '/assets/textures/torus_rainbow.png'
+        },
+        {
+            id: 'pumpkin',
+            type: 'low',
+            spawnMode: 'glb',
+            file: 'pumpkin.glb',
+            scale: 1,
+            positionY: 0,
+            rotation: { x: 0, y: 0, z: 0 },
+            seasons: ['autumn']
         },
         {
             id: 'trefoil_obstacle',
@@ -107,7 +162,7 @@ export const CONFIG = {
             radialSegments: 8,
             positionY: 1.5,
             rotation: { x: 0, y: 0, z: 0 },
-            seasons: ['spring', 'summer', 'autumn', 'winter']
+            seasons: ['summer']
         },
         {
             id: 'winter_log',
@@ -125,7 +180,7 @@ export const CONFIG = {
             file: 'cartoon_plane.glb',
             scale: 1.2,
             positionY: 3.5,
-            seasons: ['spring', 'summer', 'autumn']
+            seasons: ['autumn']
         },
         {
             id: 'candy_cane',
@@ -135,7 +190,7 @@ export const CONFIG = {
             scale: 5,
             positionY: 0,
             rotation: { x: 0, y: 0, z: 0 },
-            seasons: ['winter', 'autumn', 'spring', 'summer']
+            seasons: ['winter']
         },
         {
             id: 'santa_claus',
@@ -145,7 +200,7 @@ export const CONFIG = {
             scale: 0.01,
             positionY: 0,
             rotation: { x: 0, y: 0, z: 0 },
-            seasons: ['winter', 'spring', 'summer', 'autumn']
+            seasons: ['winter']
         }
     ],
 
@@ -156,7 +211,7 @@ export const CONFIG = {
         { id: 'super_bunny', name: 'Super Bunny', file: 'super_bunny_final.glb', scale: 1, rotationY: Math.PI / 2, positionY: 1 }
     ],
     MONSTERS: [
-        { id: 'demon_v1', name: 'Quỷ Lửa', file: 'player_v1.glb' }, // Đổi tên file cho đúng
+        { id: 'demon_v1', name: 'Quỷ Lửa', file: 'demon.glb' }, // Đổi tên file cho đúng
     ],
 
     BRIDGE: {

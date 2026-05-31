@@ -301,23 +301,20 @@ export class Environment {
     createTurnSection(z, dir) {
         const groundMat = this.getCurrentGroundMat();
         const roadWidth = CONFIG.ROAD_WIDTH || 14;
+        const tileLength = this.tileLength || 50;
 
-        // Xóa đoạn đường thẳng phía trước ngã rẽ
+        // Xóa đoạn đường thẳng phía trước ngã rẽ (xóa hết)
         this.floorTiles = this.floorTiles.filter(tile => {
-            const isStraightAheadToRemove =
-                !tile.userData.isTurnVisual &&
-                !tile.userData.isTurn &&
-                tile.position.z < z &&
-                tile.position.z > z - 80;
-
-            if (isStraightAheadToRemove) {
-                this.scene.remove(tile);
-                return false;
+            if (!tile.userData.isTurnVisual && !tile.userData.isTurn) {
+                if (tile.position.z < z && tile.position.z > z - 80) {
+                    this.scene.remove(tile);
+                    return false;
+                }
             }
             return true;
         });
 
-        // Xóa cây ở vùng đường thẳng phía trước khi rẽ
+        // Xóa hết cây phía trước điểm rẽ
         this.trees = this.trees.filter(tree => {
             if (tree.position.z < z && tree.position.z > z - 100) {
                 this.scene.remove(tree);
@@ -328,20 +325,35 @@ export class Environment {
 
         const side = dir === 'left' ? -1 : 1;
 
-        // Tạo ngã rẽ chữ L gắt 90 độ
-        // 1. Miếng góc vuông tại điểm rẽ
+        // Mép trên của đường thẳng = z (điểm bắt đầu rẽ)
+        // Tile đường thẳng đặt tại mép này, kéo dài về phía player (Z lớn hơn)
+        const straightStartZ = z;
+
+        // 1. Thêm tile đường thẳng tại mép điểm rẽ
+        const straightTile = new THREE.Mesh(
+            new THREE.PlaneGeometry(roadWidth, roadWidth),
+            groundMat
+        );
+        straightTile.rotation.x = -Math.PI / 2;
+        straightTile.position.set(0, 0, straightStartZ - roadWidth / 2);
+        straightTile.receiveShadow = true;
+        straightTile.userData.isTurnVisual = true;
+        this.scene.add(straightTile);
+        this.floorTiles.push(straightTile);
+
+        // 2. Miếng góc vuông tại điểm rẽ
         const cornerTile = new THREE.Mesh(
             new THREE.PlaneGeometry(roadWidth, roadWidth),
             groundMat
         );
         cornerTile.rotation.x = -Math.PI / 2;
-        cornerTile.position.set(side * roadWidth / 2, 0, z - roadWidth / 2);
+        cornerTile.position.set(side * roadWidth / 2, 0, straightStartZ - roadWidth / 2);
         cornerTile.receiveShadow = true;
         cornerTile.userData.isTurnVisual = true;
         this.scene.add(cornerTile);
         this.floorTiles.push(cornerTile);
 
-        // 2. Đoạn đường đi thẳng theo chiều ngang (từ miếng góc đi ra)
+        // 3. Đoạn đường đi thẳng theo chiều ngang
         for (let i = 1; i <= 6; i++) {
             const tile = new THREE.Mesh(
                 new THREE.PlaneGeometry(roadWidth, roadWidth),
@@ -349,7 +361,7 @@ export class Environment {
             );
 
             tile.rotation.x = -Math.PI / 2;
-            tile.position.set(side * (roadWidth / 2 + i * roadWidth), 0, z - roadWidth / 2);
+            tile.position.set(side * (roadWidth / 2 + i * roadWidth), 0, straightStartZ - roadWidth / 2);
             tile.receiveShadow = true;
             tile.userData.isTurnVisual = true;
 

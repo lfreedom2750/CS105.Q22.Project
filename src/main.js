@@ -9,7 +9,10 @@ import { Monster } from './entities/Monster.js';
 import { Environment } from './entities/Environment.js';
 import { Spawner } from './entities/Spawner.js';
 import { PlaneEvent } from './entities/PlaneEvent.js';
+import { DragonEvent } from './entities/DragonEvent.js';
 import { SnowEffect } from './entities/SnowEffect.js';
+import { CherryBlossomEffect } from './entities/CherryBlossomEffect.js';
+import { WaterEffect } from './entities/WaterEffect.js';
 import { SoundManager } from './core/SoundManager.js';
 
 const { scene, camera, renderer, sunLight, hemiLight } = initScene();
@@ -26,10 +29,28 @@ const monster = new Monster(scene);
 const env = new Environment(scene, hemiLight);
 const spawner = new Spawner(scene, env);
 const planeEvent = new PlaneEvent(scene);
+const dragonEvent = new DragonEvent(scene, env, player);
 const snowEffect = new SnowEffect(scene);
+const cherryBlossom = new CherryBlossomEffect(scene);
+const waterEffect = new WaterEffect(scene);
 const soundManager = new SoundManager();
 
+// Link spawner to scene for shield communication
+scene.userData.spawner = spawner;
+
+// Khởi tạo âm thanh sớm để phát nhạc menu
+soundManager.init();
+
 let cameraMode = 'thirdPerson';
+
+// Camera intro state
+let cameraIntro = {
+    active: true,
+    endTime: 0,
+    startPos: new THREE.Vector3(),
+    targetPos: new THREE.Vector3(),
+    duration: 5 // 5 giây
+};
 
 const updateCameraMode = () => {
     if (cameraMode === 'thirdPerson') {
@@ -40,7 +61,7 @@ const updateCameraMode = () => {
     } else if (cameraMode === 'firstPerson') {
         const laneX = player.model ? player.model.position.x : 0;
 
-        camera.position.set(laneX, 3.2, 0.2);
+        camera.position.set(laneX, 3.2, 0);
         camera.rotation.set(0, 0, 0);
 
         if (player.model) player.model.visible = false;
@@ -109,7 +130,7 @@ let turnTime = 0;
 let turnDirection = 1;
 
 let seasonTimer = 0;
-const SEASON_DURATION = 10; // 20 giây đổi mùa
+const SEASON_DURATION = 20; // 20 giây đổi mùa
 let waitingForSeasonPortal = false;
 let isChangingSeason = false;
 
@@ -130,6 +151,10 @@ const startGame = async (selectedPlayerId, selectedMonsterId) => {
 
     try {
         await soundManager.init();
+
+        // Dừng nhạc menu, bắt đầu nhạc game
+        soundManager.stopMenuMusic();
+        soundManager.stopAmbient(); // Đảm bảo dừng mọi nhạc đang phát
         // reset state nếu chơi lại
         gameActive = false;
         score = 0;
@@ -141,12 +166,18 @@ const startGame = async (selectedPlayerId, selectedMonsterId) => {
 
         spawner.clearWorld();
         planeEvent.reset();
+        dragonEvent.reset(true);
         snowEffect.deactivate();
+        cherryBlossom.deactivate();
+        waterEffect.deactivate();
 
         await Promise.all([
             player.loadModel(selectedPlayerId),
             monster.loadModel(selectedMonsterId),
-            planeEvent.loadModel()
+            planeEvent.loadModel(),
+            dragonEvent.loadModel(),
+            cherryBlossom.loadModel(),
+            waterEffect.init()
         ]);
 
         // Khởi tạo environment theo mùa hiện tại
@@ -160,7 +191,25 @@ const startGame = async (selectedPlayerId, selectedMonsterId) => {
         if (env.initGround) env.initGround();
         if (env.initTrees) env.initTrees();
 
-        updateCameraMode();
+        // Camera intro: đặt camera phía sau xa player để thấy monster
+        const playerX = player.model?.position.x || 0;
+        const playerZ = player.group.position.z;
+
+        // Vị trí bắt đầu: xa phía sau player (để thấy monster)
+        // Camera ở z = playerZ + 50 (rất xa phía sau)
+        const introPos = new THREE.Vector3(playerX, 10, playerZ + 50);
+        // Vị trí kết thúc: vị trí thirdPerson bình thường
+        const normalPos = new THREE.Vector3(playerX, 5, playerZ + 12);
+
+        cameraIntro.active = true;
+        cameraIntro.endTime = performance.now() + cameraIntro.duration * 1000;
+        cameraIntro.startPos.copy(introPos);
+        cameraIntro.targetPos.copy(normalPos);
+
+        // Đặt camera ở vị trí intro ban đầu
+        // rotation.y = 0 nghĩa là nhìn về hướng -Z (về phía player)
+        camera.position.copy(introPos);
+        camera.rotation.set(-0.2, 0, 0);
 
         gameActive = true;
 
@@ -335,7 +384,7 @@ async function spawnLoop() {
         console.error('LỖI SPAWN:', err);
     }
 
-    const delay = Math.max(300, 1500 / (speed * 1.2));
+    const delay = Math.max(200, 800 / (speed * 1.2));
     spawnTimeout = setTimeout(spawnLoop, delay);
 }
 
@@ -379,7 +428,30 @@ function animate() {
     }
 
 
-if (cameraMode === 'firstPerson' && player.model) {
+    // Camera intro: trong 5s đầu camera đứng xa sau player rồi bay về vị trí bình thường
+    if (cameraIntro.active) {
+        const elapsed = performance.now() - (cameraIntro.endTime - cameraIntro.duration * 1000);
+        const progress = Math.min(elapsed / (cameraIntro.duration * 1000), 1);
+
+        // Easing: easeOutCubic để bay mượt
+        const eased = 1 - Math.pow(1 - progress, 3);
+
+        // Interpolate vị trí camera
+        camera.position.lerpVectors(cameraIntro.startPos, cameraIntro.targetPos, eased);
+
+        if (progress >= 1) {
+            cameraIntro.active = false;
+            // Xóa monster khỏi scene sau intro
+            if (monster.group) {
+                scene.remove(monster.group);
+            }
+            // Đặt lại rotation về bình thường sau khi intro kết thúc
+            camera.rotation.set(-0.2, 0, 0);
+        }
+    }
+
+    // 1. First person camera follow
+    if (cameraMode === 'firstPerson' && player.model) {
         const targetX = player.model.position.x;
         camera.position.x = THREE.MathUtils.lerp(
             camera.position.x,
@@ -393,8 +465,13 @@ if (cameraMode === 'firstPerson' && player.model) {
     const pZ = player.group.position.z;
 
     // 3. Event máy bay
-    if (!planeEvent.active && score > 500 && Math.random() < 0.003) {
+    if (!planeEvent.active && !dragonEvent.active && score > 500 && Math.random() < 0.003) {
         planeEvent.start(pX, pZ);
+    }
+
+    // 3.5. Event rồng mùa xuân
+    if (!dragonEvent.active && !planeEvent.active && env.currentSeasonIndex === 0 && score > 100 && Math.random() < 0.008) {
+        dragonEvent.start(pX, pZ);
     }
 
     // 4. Check vượt qua điểm rẽ
@@ -407,12 +484,18 @@ if (cameraMode === 'firstPerson' && player.model) {
     }
 
     // 5. Update entity
-    monster.update(delta, time, pX);
+    monster.update(delta, time, pX, pZ);
     env.update(speed, pZ);
     spawner.update(speed, player, addCoin, gameOver, seasonChange);
     planeEvent.update(delta, time, pX, pZ, spawner.obstacles);
+    dragonEvent.update(delta, time, pX, pZ);
+    
     snowEffect.setSeason(env.currentSeasonIndex === 3); // Chỉ mùa đông (index 3)
     snowEffect.update(pZ, delta);
+    cherryBlossom.setSeason(env.currentSeasonIndex === 0); // Chỉ mùa xuân (index 0)
+    cherryBlossom.update(delta, time, pZ);
+    waterEffect.setSeason(env.currentSeasonIndex === 1); // Chỉ mùa hè (index 1)
+    waterEffect.update(pZ);
 
     // 6. Ánh sáng
     sunLight.position.set(pX + 5, 25, pZ + 10);

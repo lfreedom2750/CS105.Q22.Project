@@ -26,12 +26,14 @@ export class UIManager {
             this.dom.containerPlayer.appendChild(btn);
         });
 
-        // 2. Sinh các nút chọn Quái vật từ Config
-        CONFIG.MONSTERS.forEach((m, index) => {
-            const btn = this.createSelectButton(m.name, m.id, index === 0);
-            btn.onclick = () => this.selectMonster(m.id);
-            this.dom.containerMonster.appendChild(btn);
-        });
+        // 2. Sinh các nút chọn Quái vật từ Config (nếu phần tử có tồn tại)
+        if (this.dom.containerMonster) {
+            CONFIG.MONSTERS.forEach((m, index) => {
+                const btn = this.createSelectButton(m.name, m.id, index === 0);
+                btn.onclick = () => this.selectMonster(m.id);
+                this.dom.containerMonster.appendChild(btn);
+            });
+        }
 
         // 3. Logic Nút Play
         this.dom.btnPlay.onclick = () => {
