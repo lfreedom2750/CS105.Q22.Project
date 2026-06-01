@@ -22,9 +22,9 @@ export class SoundManager {
         await this.loadSound('obstacle', '/assets/sounds/hit.mp3');
         await this.loadSound('river', '/assets/sounds/river.mp3');
         await this.loadSound('footstep', '/assets/sounds/footstep.mp3');
-        await this.loadSound('ambientSpring', '/assets/sounds/ambient_halloween.wav');
-        await this.loadSound('ambientSummer', '/assets/sounds/ambient_halloween.wav');
-        await this.loadSound('ambientAutumn', '/assets/sounds/ambient_halloween.wav');
+        await this.loadSound('ambientSpring', '/assets/sounds/ambient_spring.mp3');
+        await this.loadSound('ambientSummer', '/assets/sounds/ambient_summer.wav');
+        await this.loadSound('ambientAutumn', '/assets/sounds/ambient_autumn.wav');
         await this.loadSound('ambientWinter', '/assets/sounds/ambient_winter.wav');
         await this.loadSound('menuMusic', '/assets/sounds/background_game.wav');
 

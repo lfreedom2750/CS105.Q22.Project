@@ -78,11 +78,11 @@ export class WaterEffect {
         const height = this.waterCanvas.height;
 
         const gradient = ctx.createLinearGradient(0, 0, width, 0);
-        gradient.addColorStop(0, '#1a5fb4');
-        gradient.addColorStop(0.3, '#26a269');
-        gradient.addColorStop(0.5, '#26a269');
-        gradient.addColorStop(0.7, '#1a5fb4');
-        gradient.addColorStop(1, '#1a5fb4');
+        gradient.addColorStop(0, '#0077b6');
+        gradient.addColorStop(0.3, '#00a8e8');
+        gradient.addColorStop(0.5, '#00a8e8');
+        gradient.addColorStop(0.7, '#0077b6');
+        gradient.addColorStop(1, '#0077b6');
 
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, width, height);

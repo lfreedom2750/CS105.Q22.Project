@@ -15,12 +15,15 @@
         </div>
 
         <div class="selection-group" id="group-camera">
-    <div class="group-title">Chọn Góc Nhìn</div>
-        <div class="buttons-container" id="container-camera">
-            <button class="camera-option selected" data-camera="thirdPerson">Góc nhìn thứ 3</button>
-            <button class="camera-option" data-camera="firstPerson">Góc nhìn thứ 1</button>
+            <div class="group-title">Chọn Góc Nhìn</div>
+            <div class="buttons-container" id="container-camera">
+                <button class="camera-option selected" data-camera="thirdPerson">Góc nhìn thứ 3</button>
+                <button class="camera-option" data-camera="firstPerson">Góc nhìn thứ 1</button>
+            </div>
         </div>
-    </div>
+
+        <button id="btn-help" class="help-btn">HƯỚNG DẪN CHƠI</button>
+
         <button id="btn-play">CHƠI NGAY</button>
         <button id="btn-setting">Setting</button>
     </div>
@@ -48,6 +51,56 @@
 
         <div class="control-btn" id="btn-right">Phải</div>
     </div> -->
+
+    <!-- Modal Hướng dẫn -->
+    <div id="help-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Hướng Dẫn Chơi</h2>
+
+            <div class="help-section">
+                <h3>🎮 Điều khiển</h3>
+                <table class="help-table">
+                    <tr><td>⬅️ ➡️</td><td>Di chuyển sang trái/phải</td></tr>
+                    <tr><td>⬆️ / Space / W</td><td>Nhảy (tránh chướng ngại vật)</td></tr>
+                    <tr><td>C</td><td>Chuyển góc nhìn</td></tr>
+                </table>
+            </div>
+
+            <div class="help-section">
+                <h3>🎯 Mục tiêu</h3>
+                <p>• Chạy thoát khỏi quái vật phía sau</p>
+                <p>• Thu thập vàng 💰 để ghi điểm</p>
+                <p>• Tránh chướng ngại vật</p>
+                <p>• Không rơi xuống suối nước</p>
+            </div>
+
+            <div class="help-section">
+                <h3>🌟 4 Mùa trong game</h3>
+                <table class="help-table">
+                    <tr><td>🌸 Xuân</td><td>Hoa anh đào rơi, rồng may mắn xuất hiện</td></tr>
+                    <tr><td>☀️ Hạ</td><td>Nước phía dưới hiện ra, thời tiết nóng</td></tr>
+                    <tr><td>🍂 Thu</td><td>Cây lá đỏ, đường đầy lá</td></tr>
+                    <tr><td>❄️ Đông</td><td>Tuyết rơi, suối đóng băng an toàn</td></tr>
+                </table>
+            </div>
+
+            <div class="help-section">
+                <h3>⚡ Sự kiện đặc biệt</h3>
+                <p>• <strong>Máy bay</strong>: Thả bom từ trên trời (cẩn thận!)</p>
+                <p>• <strong>Rồng</strong>: Xuất hiện mùa xuân, thả kim cương kích hoạt lá chắn</p>
+                <p>• <strong>Cổng chuyển mùa</strong>: Tự động xuất hiện mỗi 20 giây</p>
+            </div>
+
+
+            <div class="help-section warning">
+                <h3>⚠️ Chú ý</h3>
+                <p>• Đừng quên rẽ đúng hướng khi gặp ngã rẽ!</p>
+                <p>• Mùa hè: suối nước rất nguy hiểm!</p>
+                <p>• Nhảy qua khe hở trên cầu!</p>
+            </div>
+        </div>
+    </div>
 
     <script type="module" src="/src/main.js"></script>
 </body>

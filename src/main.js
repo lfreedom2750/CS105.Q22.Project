@@ -191,25 +191,28 @@ const startGame = async (selectedPlayerId, selectedMonsterId) => {
         if (env.initGround) env.initGround();
         if (env.initTrees) env.initTrees();
 
-        // Camera intro: đặt camera phía sau xa player để thấy monster
+        // Camera intro: chỉ khi chọn góc nhìn thứ 3 (thấy được monster)
         const playerX = player.model?.position.x || 0;
         const playerZ = player.group.position.z;
 
-        // Vị trí bắt đầu: xa phía sau player (để thấy monster)
-        // Camera ở z = playerZ + 50 (rất xa phía sau)
-        const introPos = new THREE.Vector3(playerX, 10, playerZ + 50);
-        // Vị trí kết thúc: vị trí thirdPerson bình thường
-        const normalPos = new THREE.Vector3(playerX, 5, playerZ + 12);
+        if (cameraMode === 'thirdPerson') {
+            // Vị trí bắt đầu: xa phía sau player (để thấy monster)
+            const introPos = new THREE.Vector3(playerX, 10, playerZ + 50);
+            // Vị trí kết thúc: vị trí thirdPerson bình thường
+            const normalPos = new THREE.Vector3(playerX, 5, playerZ + 12);
 
-        cameraIntro.active = true;
-        cameraIntro.endTime = performance.now() + cameraIntro.duration * 1000;
-        cameraIntro.startPos.copy(introPos);
-        cameraIntro.targetPos.copy(normalPos);
+            cameraIntro.active = true;
+            cameraIntro.endTime = performance.now() + cameraIntro.duration * 1000;
+            cameraIntro.startPos.copy(introPos);
+            cameraIntro.targetPos.copy(normalPos);
 
-        // Đặt camera ở vị trí intro ban đầu
-        // rotation.y = 0 nghĩa là nhìn về hướng -Z (về phía player)
-        camera.position.copy(introPos);
-        camera.rotation.set(-0.2, 0, 0);
+            camera.position.copy(introPos);
+            camera.rotation.set(-0.2, 0, 0);
+        } else {
+            // Góc nhìn thứ 1: đặt luôn vị trí bình thường
+            cameraIntro.active = false;
+            updateCameraMode();
+        }
 
         gameActive = true;
 
@@ -233,6 +236,37 @@ const startGame = async (selectedPlayerId, selectedMonsterId) => {
 };
 
 new UIManager({ onStartGame: startGame });
+
+// Hướng dẫn Modal
+const helpBtn = document.getElementById('btn-help');
+const helpModal = document.getElementById('help-modal');
+const closeBtn = document.querySelector('.close-btn');
+
+if (helpBtn && helpModal) {
+    helpBtn.addEventListener('click', () => {
+        helpModal.classList.add('show');
+    });
+
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            helpModal.classList.remove('show');
+        });
+    }
+
+    // Đóng modal khi click bên ngoài
+    helpModal.addEventListener('click', (e) => {
+        if (e.target === helpModal) {
+            helpModal.classList.remove('show');
+        }
+    });
+
+    // Đóng modal khi bấm ESC
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && helpModal.classList.contains('show')) {
+            helpModal.classList.remove('show');
+        }
+    });
+}
 
 document.querySelectorAll('#container-camera .camera-option').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -299,9 +333,6 @@ new InputManager({
     },
     onJump: () => {
         if (gameActive) player.jump();
-    },
-    onSlide: () => {
-        if (gameActive) player.slide();
     }
 });
 
@@ -397,13 +428,13 @@ function animate() {
 
     bridgeTimer += delta;
 
-    if (bridgeTimer >= CONFIG.BRIDGE.interval) {
-        bridgeTimer = 0;
-
-        if (!env.activeBridge) {
-            env.spawnBridgeSegment(player.group.position.z - CONFIG.BRIDGE.spawnAhead);
-        }
-    }
+    // Bridge disabled
+    // if (bridgeTimer >= CONFIG.BRIDGE.interval) {
+    //     bridgeTimer = 0;
+    //     if (!env.activeBridge) {
+    //         env.spawnBridgeSegment(player.group.position.z - CONFIG.BRIDGE.spawnAhead);
+    //     }
+    // }
 
     if (!waitingForSeasonPortal) {
         seasonTimer += delta;

@@ -79,12 +79,12 @@ export class Spawner {
         
         this.riverWaveTime += 0.02;
         
-        // Màu nước xanh
-        ctx.fillStyle = '#4a90d9';
+        // Màu nước biển xanh trời
+        ctx.fillStyle = '#0099cc';
         ctx.fillRect(0, 0, width, height);
-        
-        // Sóng nước đậm hơn
-        ctx.fillStyle = 'rgba(30, 100, 200, 0.5)';
+
+        // Sóng nước sáng hơn
+        ctx.fillStyle = 'rgba(0, 150, 200, 0.5)';
         for (let i = 0; i < 6; i++) {
             const y = (Math.sin(this.riverWaveTime + i * 0.8) * 15) + (i * height / 6);
             ctx.beginPath();
@@ -215,6 +215,36 @@ export class Spawner {
                 ),
                 mat
             );
+        } else if (def.geometry === 'sphere') {
+            let sphereMat;
+
+            if (texture) {
+                texture.wrapS = THREE.RepeatWrapping;
+                texture.wrapT = THREE.ClampToEdgeWrapping;
+                texture.repeat.set(1, 1);
+
+                sphereMat = new THREE.MeshStandardMaterial({
+                    map: texture,
+                    color: 0xffffff,
+                    metalness: 0.2,
+                    roughness: 0.7
+                });
+            } else {
+                sphereMat = new THREE.MeshStandardMaterial({
+                    color: def.color || 0xffffff,
+                    metalness: 0.2,
+                    roughness: 0.7
+                });
+            }
+
+            obs = new THREE.Mesh(
+                new THREE.SphereGeometry(
+                    def.radius || 1,
+                    def.widthSegments || 32,
+                    def.heightSegments || 32
+                ),
+                sphereMat
+            );
         } else if (def.geometry === 'cylinder') {
             obs = new THREE.Mesh(
                 new THREE.CylinderGeometry(
@@ -222,15 +252,6 @@ export class Spawner {
                     def.radiusBottom || 0.8,
                     def.height || 2,
                     def.radialSegments || 10
-                ),
-                mat
-            );
-        } else if (def.geometry === 'sphere') {
-            obs = new THREE.Mesh(
-                new THREE.SphereGeometry(
-                    def.radius || 1,
-                    def.widthSegments || 16,
-                    def.heightSegments || 16
                 ),
                 mat
             );

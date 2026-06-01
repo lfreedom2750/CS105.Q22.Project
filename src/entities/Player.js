@@ -9,7 +9,6 @@ export class Player {
         this.currentLane = 1; // 0: Trái, 1: Giữa, 2: Phải
         
         this.isJumping = false; this.jumpVel = 0;
-        this.isSliding = false; this.slideTimer = 0;
 
         this.model = null;
         this.mixer = null;
@@ -46,7 +45,7 @@ export class Player {
             if (gltf.animations.length > 0) {
                 this.mixer = new THREE.AnimationMixer(this.model);
 
-                const clips = ['Run', 'Jump', 'Slide'];
+                const clips = ['Run', 'Jump'];
                 clips.forEach((name, index) => {
                     const clip = THREE.AnimationClip.findByName(gltf.animations, name) || gltf.animations[index];
                     if (clip) {
@@ -78,13 +77,12 @@ export class Player {
     }
 
     jump() {
-        if (!this.isJumping && !this.isSliding) {
+        if (!this.isJumping) {
             this.isJumping = true;
             this.jumpVel = 11.5;   // lực bật ban đầu
             this.fadeAction('Jump'); // phản hồi animation ngay khi bấm
         }
     }
-    slide() { if(!this.isJumping && !this.isSliding) { this.isSliding = true; this.slideTimer = 0.75; }}
 
     turn(direction) {
         // KHÔNG XOAY THẬT - Chỉ reset vị trí
@@ -109,7 +107,7 @@ export class Player {
         const targetX = CONFIG.LANES[this.currentLane];
         this.model.position.x = THREE.MathUtils.lerp(this.model.position.x, targetX, 10 * delta);
 
-        // 3. PHYSICS (Nhảy & Slide)
+        // 3. PHYSICS (Nhảy)
         if (this.isJumping) {
             this.group.position.y += this.jumpVel * delta;
             this.jumpVel -= 30 * delta;   // gravity mạnh hơn
@@ -120,15 +118,9 @@ export class Player {
                 this.jumpVel = 0;
             }
         }
-        
-        if (this.isSliding) { 
-            this.slideTimer -= delta; 
-            if (this.slideTimer <= 0) this.isSliding = false; 
-        }
 
         // 4. ANIMATION STATE
         if (this.isJumping) this.fadeAction('Jump');
-        else if (this.isSliding) this.fadeAction('Slide');
         else this.fadeAction('Run');
     }
 }

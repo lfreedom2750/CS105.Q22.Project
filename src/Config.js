@@ -23,7 +23,7 @@ export const CONFIG = {
             treeModel: 'sakura_tree.glb',
             treeScale: 10,
             obstacleTheme: 'spring',
-            riverColor: 0xfff0b3  // Cùng màu bg mùa hè
+            riverColor: 0x0099cc  // Cùng màu bg mùa hè
         },
         {
             id: 'summer',
@@ -36,7 +36,7 @@ export const CONFIG = {
             treeModel: 'palm_tree.glb',
             treeScale: 2.5,
             obstacleTheme: 'summer',
-            riverColor: 0xfff0b3  // Cùng màu bg mùa hè
+            riverColor: 0x0099cc  // Cùng màu bg mùa hè
         },
         {
             id: 'autumn',
@@ -46,10 +46,10 @@ export const CONFIG = {
             hemiLightColor: new THREE.Color(0xffd6a5),
             portalColor: 0xff7a00,
             roadTexture: 'road_autumn.jpg',
-            treeModel: 'palm_tree.glb',
-            treeScale: 2.5,
+            treeModel: 'autumn_maple.glb',
+            treeScale: 5.0,
             obstacleTheme: 'autumn',
-            riverColor: 0xfff0b3  // Cùng màu bg mùa hè
+            riverColor: 0x0099cc  // Cùng màu bg mùa hè
         },
         {
             id: 'winter',
@@ -125,7 +125,8 @@ export const CONFIG = {
             height: 2,
             radialSegments: 8,
             positionY: 1,
-            seasons: ['summer']
+            seasons: ['summer'],
+            texture: '/assets/textures/cone_spike.png'
         },
         {
             id: 'torus_obstacle',
@@ -139,7 +140,20 @@ export const CONFIG = {
             positionY: 1.5,
             rotation: { x: 0, y: 0, z: 0 },  // Không xoay - hướng về phía player
             seasons: ['summer'],
-            texture: '/assets/textures/torus_rainbow.png'
+            texture: '/assets/textures/torus_rainbow.jpg'
+        },
+        {
+            id: 'beach_ball',
+            type: 'low',
+            spawnMode: 'code',
+            geometry: 'sphere',
+            radius: 1,
+            widthSegments: 32,
+            heightSegments: 32,
+            positionY: 1,
+            color: 0xffffff,
+            seasons: ['summer'],
+            texture: '/assets/textures/beach_ball.png'
         },
         {
             id: 'pumpkin',
@@ -165,29 +179,11 @@ export const CONFIG = {
             seasons: ['summer']
         },
         {
-            id: 'winter_log',
-            type: 'low',
-            spawnMode: 'glb',
-            file: 'cartoon_plane.glb',
-            scale: 1.0,
-            positionY: 0.6,
-            seasons: ['winter']
-        },
-        {
-            id: 'barrier_high',
-            type: 'high',
-            spawnMode: 'glb',
-            file: 'cartoon_plane.glb',
-            scale: 1.2,
-            positionY: 3.5,
-            seasons: ['autumn']
-        },
-        {
             id: 'candy_cane',
             type: 'low',
             spawnMode: 'glb',
             file: 'candy_cane.glb',
-            scale: 5,
+            scale: 2,
             positionY: 0,
             rotation: { x: 0, y: 0, z: 0 },
             seasons: ['winter']
