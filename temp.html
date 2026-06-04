@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GLB Pumpkin Lamp Test</title>
+
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #hud {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: monospace;
+            font-size: 14px;
+            background: rgba(0, 0, 0, 0.75);
+            padding: 12px;
+            border-radius: 6px;
+            z-index: 10;
+            max-width: 420px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="hud">Loading model...</div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        const MODEL_PATH = './simple_street_lamp.glb';
+        const hud = document.getElementById('hud');
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050505);
+        scene.fog = new THREE.Fog(0x050505, 18, 60);
+
+        const camera = new THREE.PerspectiveCamera(
+            60,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            2000
+        );
+        camera.position.set(0, 4, 10);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        document.body.appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.target.set(0, 2, 0);
+
+        // Ánh sáng môi trường rất nhẹ để giữ cảnh tối
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.25);
+        scene.add(ambientLight);
+
+        // Ánh trăng / đèn phụ
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(6, 10, 6);
+        directionalLight.castShadow = true;
+        scene.add(directionalLight);
+
+        // Nền / mặt đất
+        const groundGeometry = new THREE.PlaneGeometry(80, 80);
+
+        const groundMaterial = new THREE.MeshStandardMaterial({
+            color: 0x2b2b2b,
+            roughness: 0.9,
+            metalness: 0.0
+        });
+
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = 0;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Lưới mờ để thấy rõ mặt nền
+        const grid = new THREE.GridHelper(80, 80, 0x444444, 0x222222);
+        grid.position.y = 0.01;
+        scene.add(grid);
+
+        let model = null;
+        let mouthLight = null;
+
+        const loader = new GLTFLoader();
+
+        loader.load(
+            MODEL_PATH,
+
+            (gltf) => {
+                model = gltf.scene;
+
+                const box = new THREE.Box3().setFromObject(model);
+                const size = box.getSize(new THREE.Vector3());
+                const center = box.getCenter(new THREE.Vector3());
+
+                model.position.x -= center.x;
+                model.position.y -= box.min.y;
+                model.position.y += 1; // Đẩy lên một chút để tránh bị z-fighting với mặt đất
+                model.position.z -= center.z;
+
+                const targetSize = 5;
+                const maxDim = Math.max(size.x, size.y, size.z);
+
+                if (maxDim > 0) {
+                    const scale = targetSize / maxDim;
+                    model.scale.setScalar(scale);
+                }
+
+                model.traverse((child) => {
+                    if (child.isMesh) {
+                        child.castShadow = true;
+                        child.receiveShadow = true;
+
+                        if (child.material && child.material.emissiveMap) {
+                            child.material.emissive.set(0xffcc33);
+                            child.material.emissiveIntensity = 20;
+                            child.material.needsUpdate = true;
+                        }
+                    }
+                });
+
+                scene.add(model);
+
+                // Ánh sáng vàng phát ra từ miệng/họng bí ngô
+                mouthLight = new THREE.PointLight(
+                    0xffcc33,
+                    18,
+                    12,
+                    1.5
+                );
+
+                mouthLight.position.set(0, 2.0, 1.15);
+                mouthLight.castShadow = true;
+                scene.add(mouthLight);
+
+                // SpotLight để ánh sáng hắt ra phía trước miệng
+                const mouthSpotLight = new THREE.SpotLight(
+                    0xffcc33,
+                    35,
+                    18,
+                    Math.PI / 6,
+                    0.45,
+                    1.2
+                );
+
+                mouthSpotLight.position.set(0, 2.1, 0.8);
+                mouthSpotLight.target.position.set(0, 1.8, 6);
+                mouthSpotLight.castShadow = true;
+
+                scene.add(mouthSpotLight);
+                scene.add(mouthSpotLight.target);
+
+                hud.innerHTML = `
+                    <b style="color:#00ff66">MODEL LOADED</b><br>
+                    Path: ${MODEL_PATH}<br>
+                    Size: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}<br>
+                    Material emissive boosted<br>
+                    Ground added<br>
+                    Yellow mouth light added<br>
+                    <br>
+                    Drag mouse to rotate<br>
+                    Scroll to zoom
+                `;
+            },
+
+            (progress) => {
+                const percent = progress.total
+                    ? (progress.loaded / progress.total * 100).toFixed(0)
+                    : 0;
+
+                hud.innerHTML = `Loading model... ${percent}%`;
+            },
+
+            (error) => {
+                console.error('Failed to load GLB:', error);
+
+                hud.innerHTML = `
+                    <b style="color:red">LOAD FAILED</b><br>
+                    Check model path:<br>
+                    ${MODEL_PATH}<br>
+                    <br>
+                    Open Console for details.
+                `;
+            }
+        );
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            controls.update();
+
+            if (model) {
+                model.rotation.y += 0.003;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
