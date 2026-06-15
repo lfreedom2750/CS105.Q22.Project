@@ -1,3 +1,5 @@
 public/
 dist/
 dist/assets.zip
+node_modules/
+*.log
