@@ -3,6 +3,9 @@ dist/assets.zip
 node_modules/
 *.log
 
-# Không push assets trong public, nhưng vẫn giữ folder public
+# Keep public folders, but do not commit local asset files.
 /public/*
 !/public/.gitkeep
+!/public/assets/
+/public/assets/*
+!/public/assets/.gitkeep
