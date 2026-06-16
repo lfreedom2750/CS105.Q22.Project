@@ -1,5 +1,8 @@
-public/
 dist/
 dist/assets.zip
 node_modules/
 *.log
+
+# Không push assets trong public, nhưng vẫn giữ folder public
+/public/*
+!/public/.gitkeep
